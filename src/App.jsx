@@ -12,6 +12,9 @@ import QRScanner from "./pages/QRScanner";
 import ValidationSuccess from "./pages/ValidationSuccess";
 import ScanHistory from "./pages/ScanHistory";
 import Settings from "./pages/Settings";
+import NearbyStations from "./pages/NearbyStations";
+import UserScanHistory from "./pages/UserScanHistory";
+import AdminDashboard from "./pages/AdminDashboard";
 
 export default function App() {
   const [screen, setScreen] = useState("landing");
@@ -31,6 +34,9 @@ export default function App() {
     setActiveTab(tab);
 
     if (tab === "dashboard") setScreen("user-dashboard");
+    else if (tab === "user-history") setScreen("user-history");
+    else if (tab === "map") setScreen("map");
+    else if (tab === "settings") setScreen("user-settings");
   };
 
   const handleStationLoginSuccess = (officerData) => {
@@ -51,8 +57,9 @@ export default function App() {
   };
 
   const handleStationRegisterSuccess = (stationData) => {
-    console.log("Station registered:", stationData);
-    setScreen("landing");
+    setOfficer(stationData);
+    setScreen("dashboard");
+    setActiveTab("dashboard");
   };
 
   const handleScan = () => setScreen("scanner");
@@ -70,12 +77,17 @@ export default function App() {
     setActiveTab("dashboard");
   };
 
+  if (screen === "admin") {
+    return <AdminDashboard onLogout={handleLogout} />;
+  }
+
   if (screen === "landing") {
     return (
       <AuthLanding
         onStationLogin={() => setScreen("station-login")}
         onResidentLogin={() => setScreen("resident-login")}
         onRegister={() => setScreen("register-type")}
+        onAdmin={() => setScreen("admin")}
       />
     );
   }
@@ -130,7 +142,7 @@ export default function App() {
     return (
       <QRDisplay
         resident={resident}
-        onDone={() => setScreen("landing")}
+        onDone={() => setScreen("user-dashboard")}
       />
     );
   }
@@ -147,6 +159,7 @@ export default function App() {
   if (screen === "validation") {
     return (
       <ValidationSuccess
+        officer={officer}
         onBack={handleValidationBack}
         activeTab={activeTab}
         onTabChange={handleOfficerTabChange}
@@ -157,6 +170,7 @@ export default function App() {
   if (screen === "history") {
     return (
       <ScanHistory
+        officer={officer}
         activeTab={activeTab}
         onTabChange={handleOfficerTabChange}
       />
@@ -170,6 +184,42 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={handleOfficerTabChange}
         onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (screen === "user-settings") {
+    return (
+      <Settings
+        officer={resident}
+        activeTab={activeTab}
+        onTabChange={handleUserTabChange}
+        onLogout={handleLogout}
+        tabs={[
+          { id: "dashboard", icon: "dashboard", label: "Dashboard" },
+          { id: "user-history", icon: "receipt_long", label: "Scan History" },
+          { id: "map", icon: "map", label: "Map" },
+          { id: "settings", icon: "account_circle", label: "Account" },
+        ]}
+      />
+    );
+  }
+
+  if (screen === "user-history") {
+    return (
+      <UserScanHistory
+        resident={resident}
+        activeTab={activeTab}
+        onTabChange={handleUserTabChange}
+      />
+    );
+  }
+
+  if (screen === "map") {
+    return (
+      <NearbyStations
+        activeTab={activeTab}
+        onTabChange={handleUserTabChange}
       />
     );
   }

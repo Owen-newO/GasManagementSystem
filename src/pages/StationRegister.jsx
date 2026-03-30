@@ -2,9 +2,10 @@ import { useState } from "react";
 
 export default function StationRegister({ onBack, onSuccess }) {
   const [form, setForm] = useState({
-    stationName: "",
+    barangay: "",
+    brand: "",
     officerFirstName: "",
-    officerLastName: "",
+    capacity: "",
     stationCode: "",
   });
   const [error, setError] = useState("");
@@ -127,12 +128,13 @@ const Brands = [
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const { stationName, officerFirstName, officerLastName, stationCode } = form;
+    const { barangay, brand, officerFirstName, capacity, stationCode } = form;
 
     if (
-      !stationName.trim() ||
+      !barangay ||
+      !brand ||
       !officerFirstName.trim() ||
-      !officerLastName.trim() ||
+      !capacity.toString().trim() ||
       !stationCode.trim()
     ) {
       setError("All fields are required.");
@@ -140,9 +142,10 @@ const Brands = [
     }
 
     onSuccess({
-      stationName: stationName.trim(),
+      barangay,
+      brand,
       officerFirstName: officerFirstName.trim(),
-      officerLastName: officerLastName.trim(),
+      capacity,
       stationCode: stationCode.trim().toUpperCase(),
       role: "station",
       registeredAt: new Date().toISOString(),
@@ -163,7 +166,7 @@ const Brands = [
             Station Registration
           </h1>
           <p className="text-[10px] text-[#003366] font-black uppercase tracking-wider opacity-70">
-            Cebu Fuel Val
+            Fuel Rationing System
           </p>
         </div>
       </div>

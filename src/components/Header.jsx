@@ -14,7 +14,7 @@ export default function Header({ onClose }) {
         </div>
         <div>
           <h1 className="text-[#003366] font-headline font-bold tracking-tight text-lg leading-none">
-            Cebu Fuel Val
+            Fuel Rationing System
           </h1>
           <p className="text-[10px] text-[#003366] font-black uppercase tracking-wider opacity-80">
             Official Portal

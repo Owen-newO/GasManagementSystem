@@ -43,7 +43,7 @@ export default function Login({ onBack, onSuccess }) {
             Officer Login
           </h1>
           <p className="text-[10px] text-[#003366] font-black uppercase tracking-wider opacity-70">
-            Cebu Fuel Val
+            Fuel Rationing System
           </p>
         </div>
       </div>

@@ -1,10 +1,8 @@
-const SEAL_URL =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCbbe-zthaM_t4yu1d8rgLXIXnsVdYAhK4iVpRkY38-T3C0QczupjBJ-hIbKtILZOYmftRglfHQA5ORA67weq_22pWa4Ygb6InCCo-UHuR3fliRnk2eF9uCgMpEbR3rQJErsjiL4xg67xg7yW2azcjHj0PDs3ijssOzkJPftoPzLotreDN2AdpeV_dKBJsIE1cH0t5lBhcNEbd_I77vjTXCG6xCE3bRmNtU_K8qSaqu2wjy1uFx7j1PgRNIJkKp7IiKFMwJgnl1Ev7U";
-
 export default function AuthLanding({
   onStationLogin,
   onResidentLogin,
   onRegister,
+  onAdmin,
 }) {
   return (
     <div className="flex flex-col min-h-dvh bg-primary-container">
@@ -15,8 +13,13 @@ export default function AuthLanding({
             "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20 L20 0 M20 40 L40 20 M0 0 L40 40' stroke='%23ffffff' stroke-width='1' fill='none' opacity='0.05'/%3E%3C/svg%3E\")",
         }}
       >
-        <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center overflow-hidden mb-6 shadow-2xl">
-          <img src={SEAL_URL} alt="Cebu City Seal" className="w-full h-full object-cover" />
+        <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center mb-6 shadow-2xl">
+          <span
+            className="material-symbols-outlined text-yellow-400"
+            style={{ fontSize: "52px", fontVariationSettings: "'FILL' 1" }}
+          >
+            local_gas_station
+          </span>
         </div>
 
         <p className="text-on-primary-container text-[11px] font-black uppercase tracking-[0.2em] mb-1">
@@ -24,7 +27,7 @@ export default function AuthLanding({
         </p>
 
         <h1 className="font-headline font-black text-white text-4xl text-center leading-tight mb-2">
-          Cebu Fuel Val
+          Fuel Rationing System
         </h1>
 
         <p className="text-white/60 text-sm text-center max-w-[260px] leading-relaxed">
@@ -62,8 +65,15 @@ export default function AuthLanding({
         >
           No Account? Register
         </button>
-        <p className="text-center text-[10px] text-outline pt-4">
-          © 2024 Cebu City Government · LGU Fuel Management System
+        <button
+          onClick={onAdmin}
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold text-slate-400 hover:text-[#003366] transition-colors"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>admin_panel_settings</span>
+          CMS Admin Portal
+        </button>
+        <p className="text-center text-[10px] text-outline pt-2">
+          © 2024 Mata Technologies Inc. · Fuel Rationing System
         </p>
       </div>
     </div>
