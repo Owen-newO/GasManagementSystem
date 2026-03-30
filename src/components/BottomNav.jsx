@@ -1,10 +1,10 @@
-const tabs = [
+const OFFICER_TABS = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard" },
   { id: "history", icon: "receipt_long", label: "Scan History" },
-  { id: "settings", icon: "settings", label: "Settings" },
+  { id: "settings", icon: "account_circle", label: "Account" },
 ];
 
-export default function BottomNav({ active, onChange }) {
+export default function BottomNav({ active, onChange, tabs = OFFICER_TABS }) {
   return (
     <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-white/80 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,30,64,0.06)] rounded-t-3xl">
       {tabs.map((tab) => {

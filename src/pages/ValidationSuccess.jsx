@@ -1,13 +1,28 @@
-import Header from "../components/Header";
 import BottomNav from "../components/BottomNav";
 
 const RESIDENT_IMG =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuAXqfapZS-XB6Ex6q9gvjpqo49kBnsKSV_xUi6169zZVPThLwv48yJSCJsg3D7IyBEQdesNhfzMVu4GbPrY-h_mMN48GNkjkDN94i2VLoNirV4gdVD9_vpFG_EUcvNBe-m9ofA0uEj-1fsv42-nOFkcpEpueA2XQdh55CDsc-3WQ3VKnvWCEa2TuKoYjPbW7Ul7uxELnVZ-rROGOE6PCdHq3b7944xXgic5uGrP2T2o2xLqLCfUhCZh_64W-e0uHD5DJ18JBsXhcMQY";
 
-export default function ValidationSuccess({ onBack, activeTab, onTabChange }) {
+export default function ValidationSuccess({ officer, onBack, activeTab, onTabChange }) {
+  const managerName = officer?.officerFirstName || officer?.firstName || "Manager";
+  const brand = officer?.brand || "Station";
+
   return (
     <div className="flex flex-col min-h-dvh bg-surface">
-      <Header />
+      {/* Profile bar */}
+      <div className="mx-4 mt-5 mb-2 flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-sm border border-outline-variant/20">
+        <div className="w-11 h-11 rounded-full border-2 border-[#003366] flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined text-[#003366]" style={{ fontSize: "24px" }}>manage_accounts</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-headline font-bold text-[#003366] text-base leading-tight truncate">{managerName}</p>
+          <p className="text-xs text-slate-400 font-medium">Station Officer · {brand}</p>
+        </div>
+        <div className="shrink-0 flex flex-col items-center justify-center bg-[#003366] rounded-xl px-3 py-1.5 gap-0.5">
+          <span className="material-symbols-outlined text-yellow-400" style={{ fontSize: "18px", fontVariationSettings: "'FILL' 1" }}>local_gas_station</span>
+          <span className="text-[9px] font-black text-white uppercase tracking-wider">Fuel Rationing</span>
+        </div>
+      </div>
 
       <main
         className="flex-1 pt-6 pb-36 px-4 max-w-md mx-auto w-full"
@@ -133,7 +148,7 @@ export default function ValidationSuccess({ onBack, activeTab, onTabChange }) {
         </div>
 
         <div className="mt-8 text-center text-outline text-xs space-y-1 pb-4">
-          <p>© 2024 Cebu City Government</p>
+          <p>© 2024 Mata Technologies Inc.</p>
           <p>Ref ID: VAL-9823-CEB-2024</p>
         </div>
       </main>

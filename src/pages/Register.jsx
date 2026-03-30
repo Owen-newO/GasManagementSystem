@@ -226,20 +226,6 @@ export default function Register({ onBack, onSuccess }) {
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Last Name
-            </label>
-            <input
-              type="text"
-              name="lastName"
-              value={form.lastName}
-              onChange={handleChange}
-              placeholder="e.g. Dela Cruz"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
               First Name
             </label>
             <input
@@ -248,6 +234,20 @@ export default function Register({ onBack, onSuccess }) {
               value={form.firstName}
               onChange={handleChange}
               placeholder="e.g. Juan"
+              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              Last Name
+            </label>
+            <input
+              type="text"
+              name="lastName"
+              value={form.lastName}
+              onChange={handleChange}
+              placeholder="e.g. Dela Cruz"
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
             />
           </div>
@@ -298,7 +298,7 @@ export default function Register({ onBack, onSuccess }) {
 
           <button
             type="submit"
-            className="w-full bg-tertiary text-on-tertiary font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
           >
             <span
               className="material-symbols-outlined"

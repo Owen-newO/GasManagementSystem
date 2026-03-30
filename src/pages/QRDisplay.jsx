@@ -27,7 +27,7 @@ export default function QRDisplay({ resident, onDone }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `CebuFuelVal_${plate}.svg`;
+    a.download = `FuelRationingSystem_${plate}.svg`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -45,7 +45,7 @@ export default function QRDisplay({ resident, onDone }) {
           <div className="text-left">
             <h1 className="text-white font-headline font-bold text-base leading-none">Registration Successful</h1>
             <p className="text-[9px] text-on-primary-container font-bold uppercase tracking-widest opacity-70">
-              Cebu Fuel Val · Official Portal
+              Fuel Rationing System · Official Portal
             </p>
           </div>
         </div>
@@ -72,18 +72,17 @@ export default function QRDisplay({ resident, onDone }) {
       <div className="flex-1 bg-background rounded-t-3xl flex flex-col overflow-hidden">
         <div className="flex-1 flex flex-col px-5 pt-5 pb-3 gap-4 min-h-0 overflow-y-auto">
 
-          {/* QR code — centered, full width feel */}
-          <div className="flex justify-center">
-            <div ref={svgRef} className="bg-white rounded-2xl shadow-md p-4 inline-flex">
-              <QRCodeSVG
-                value={qrData}
-                size={190}
-                level="H"
-                includeMargin={false}
-                fgColor="#001e40"
-                bgColor="#ffffff"
-              />
-            </div>
+          {/* QR code — full width */}
+          <div ref={svgRef} className="bg-white rounded-2xl shadow-md p-5 w-full flex justify-center">
+            <QRCodeSVG
+              value={qrData}
+              size={Math.min(window.innerWidth - 96, 300)}
+              level="H"
+              includeMargin={false}
+              fgColor="#001e40"
+              bgColor="#ffffff"
+              style={{ width: "100%", height: "auto" }}
+            />
           </div>
 
           {/* 2×2 details grid */}
@@ -141,7 +140,7 @@ export default function QRDisplay({ resident, onDone }) {
             </button>
           </div>
           <p className="text-center text-outline text-[9px]">
-            © 2024 Cebu City Government · LGU Fuel Management System
+            © 2024 Mata Technologies Inc. · Fuel Rationing System
           </p>
         </div>
       </div>
