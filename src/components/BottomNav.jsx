@@ -1,0 +1,31 @@
+const tabs = [
+  { id: "dashboard", icon: "dashboard", label: "Dashboard" },
+  { id: "history", icon: "receipt_long", label: "Scan History" },
+  { id: "settings", icon: "settings", label: "Settings" },
+];
+
+export default function BottomNav({ active, onChange }) {
+  return (
+    <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-white/80 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,30,64,0.06)] rounded-t-3xl">
+      {tabs.map((tab) => {
+        const isActive = active === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`flex flex-col items-center justify-center py-2 px-5 rounded-xl transition-all duration-200 ${
+              isActive
+                ? "bg-[#003366] text-white scale-105"
+                : "text-slate-400 hover:text-[#705d00]"
+            }`}
+          >
+            <span className="material-symbols-outlined">{tab.icon}</span>
+            <span className="font-body font-medium text-[11px] mt-0.5">
+              {tab.label}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
