@@ -1,26 +1,69 @@
+import { useState } from "react";
 import BottomNav from "../components/BottomNav";
 
 const RESIDENT_IMG =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuAXqfapZS-XB6Ex6q9gvjpqo49kBnsKSV_xUi6169zZVPThLwv48yJSCJsg3D7IyBEQdesNhfzMVu4GbPrY-h_mMN48GNkjkDN94i2VLoNirV4gdVD9_vpFG_EUcvNBe-m9ofA0uEj-1fsv42-nOFkcpEpueA2XQdh55CDsc-3WQ3VKnvWCEa2TuKoYjPbW7Ul7uxELnVZ-rROGOE6PCdHq3b7944xXgic5uGrP2T2o2xLqLCfUhCZh_64W-e0uHD5DJ18JBsXhcMQY";
 
-export default function ValidationSuccess({ officer, onBack, activeTab, onTabChange }) {
+export default function ValidationSuccess({
+  officer,
+  onBack,
+  activeTab,
+  onTabChange,
+}) {
   const managerName = officer?.officerFirstName || officer?.firstName || "Manager";
   const brand = officer?.brand || "Station";
 
+  const [fuelConsumed, setFuelConsumed] = useState(12);
+  const [fuelLimit] = useState(20);
+  const [literInput, setLiterInput] = useState("");
+  const [showLimitModal, setShowLimitModal] = useState(false);
+
+  const handleAddLiters = () => {
+    const liters = parseFloat(literInput);
+
+    if (isNaN(liters) || liters <= 0) {
+      return;
+    }
+
+    if (fuelConsumed + liters > fuelLimit) {
+      setShowLimitModal(true);
+      return;
+    }
+
+    setFuelConsumed((prev) => prev + liters);
+    setLiterInput("");
+  };
+
   return (
-    <div className="flex flex-col min-h-dvh bg-surface">
+    <div className="flex flex-col min-h-dvh bg-surface relative">
       {/* Profile bar */}
       <div className="mx-4 mt-5 mb-2 flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-sm border border-outline-variant/20">
         <div className="w-11 h-11 rounded-full border-2 border-[#003366] flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-[#003366]" style={{ fontSize: "24px" }}>manage_accounts</span>
+          <span
+            className="material-symbols-outlined text-[#003366]"
+            style={{ fontSize: "24px" }}
+          >
+            manage_accounts
+          </span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-headline font-bold text-[#003366] text-base leading-tight truncate">{managerName}</p>
-          <p className="text-xs text-slate-400 font-medium">Station Officer · {brand}</p>
+          <p className="font-headline font-bold text-[#003366] text-base leading-tight truncate">
+            {managerName}
+          </p>
+          <p className="text-xs text-slate-400 font-medium">
+            Station Officer · {brand}
+          </p>
         </div>
         <div className="shrink-0 flex flex-col items-center justify-center bg-[#003366] rounded-xl px-3 py-1.5 gap-0.5">
-          <span className="material-symbols-outlined text-yellow-400" style={{ fontSize: "18px", fontVariationSettings: "'FILL' 1" }}>local_gas_station</span>
-          <span className="text-[9px] font-black text-white uppercase tracking-wider">Fuel Rationing</span>
+          <span
+            className="material-symbols-outlined text-yellow-400"
+            style={{ fontSize: "18px", fontVariationSettings: "'FILL' 1" }}
+          >
+            local_gas_station
+          </span>
+          <span className="text-[9px] font-black text-white uppercase tracking-wider">
+            Fuel Rationing
+          </span>
         </div>
       </div>
 
@@ -85,35 +128,75 @@ export default function ValidationSuccess({ officer, onBack, activeTab, onTabCha
             </div>
 
             {/* Transaction Details */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-2">
-                <span className="material-symbols-outlined text-[#003366]">
-                  directions_car
-                </span>
-                <div>
-                  <p className="text-outline text-[10px] font-bold uppercase tracking-wider">
-                    Plate Number
-                  </p>
-                  <p className="font-headline font-bold text-lg text-on-surface">
-                    ABC-1234
-                  </p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-2">
+                  <span className="material-symbols-outlined text-[#003366]">
+                    motorcycle
+                  </span>
+                  <div>
+                    <p className="text-outline text-[12px] font-bold uppercase tracking-wider">
+                      Vehicle Type
+                    </p>
+                    <p className="font-headline font-bold text-xl text-on-surface">
+                      Motorcycle
+                    </p>
+                    <p className="text-outline text-[12px] font-bold uppercase tracking-wider">
+                      Plate Number
+                    </p>
+                    <p className="font-headline font-bold text-xl text-on-surface">
+                      ABC-1234
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-2">
+                  <span
+                    className="material-symbols-outlined text-[#705d00]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    local_gas_station
+                  </span>
+                  <div>
+                    <p className="text-outline text-[12px] font-bold uppercase tracking-wider">
+                      Fuel Consumed
+                    </p>
+                    <p className="font-headline font-bold text-xl text-on-surface">
+                      {fuelConsumed}L
+                    </p>
+                    <p className="text-outline text-[12px] font-bold uppercase tracking-wider">
+                      Fuel Limit
+                    </p>
+                    <p className="font-headline font-bold text-xl text-on-surface">
+                      {fuelLimit}L
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-2">
-                <span
-                  className="material-symbols-outlined text-[#705d00]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
+
+              {/* Liter Input */}
+              <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-3">
+                <label className="text-outline text-[12px] font-bold uppercase tracking-wider">
+                  Input Liter
+                </label>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={literInput}
+                  onChange={(e) => setLiterInput(e.target.value)}
+                  placeholder="Enter liters"
+                  className="w-full rounded-lg border border-outline-variant/30 px-4 py-3 text-on-surface bg-white outline-none focus:border-[#003366]"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleAddLiters}
+                  className="w-full bg-[#705d00] text-white font-headline font-bold py-3 rounded-xl active:scale-95 transition-all"
                 >
-                  local_gas_station
-                </span>
-                <div>
-                  <p className="text-outline text-[10px] font-bold uppercase tracking-wider">
-                    Fuel Allowed
-                  </p>
-                  <p className="font-headline font-bold text-lg text-on-surface">
-                    20L
-                  </p>
-                </div>
+                  Add Liters
+                </button>
               </div>
             </div>
 
@@ -154,6 +237,48 @@ export default function ValidationSuccess({ officer, onBack, activeTab, onTabCha
       </main>
 
       <BottomNav active={activeTab} onChange={onTabChange} />
+
+      {showLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                <span
+                  className="material-symbols-outlined text-red-600"
+                  style={{ fontSize: "32px", fontVariationSettings: "'FILL' 1" }}
+                >
+                  warning
+                </span>
+              </div>
+
+              <h3 className="text-xl font-headline font-bold text-[#003366]">
+                Fuel Limit Reached
+              </h3>
+
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                This fuel request exceeds the allowed limit for this resident.
+              </p>
+
+              <div className="mt-4 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+                <p>
+                  <span className="font-semibold">Consumed:</span> {fuelConsumed}L
+                </p>
+                <p>
+                  <span className="font-semibold">Limit:</span> {fuelLimit}L
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowLimitModal(false)}
+                className="mt-5 w-full rounded-xl bg-[#003366] py-3 font-headline font-bold text-white active:scale-95 transition-all"
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
