@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
+// Official 80 barangays of Cebu City
 const CEBU_BARANGAYS = [
   "Adlaon",
   "Agsungot",
@@ -26,7 +27,6 @@ const CEBU_BARANGAYS = [
   "Day-as",
   "Duljo",
   "Ermita",
-  "Escario",
   "Guadalupe",
   "Guba",
   "Hipodromo",
@@ -44,19 +44,12 @@ const CEBU_BARANGAYS = [
   "Mabini",
   "Mabolo",
   "Malubog",
-  "Manggis",
   "Manipis",
-  "Manueva",
-  "Marcelo Fernan",
-  "Mipangi",
-  "Monte Fresco",
   "Nasipit",
   "Nga-an",
   "Nivel Hills",
   "Non-oc",
-  "Odlot",
   "Pari-an",
-  "Paril",
   "Pasil",
   "Pit-os",
   "Poblacion Pardo",
@@ -64,9 +57,6 @@ const CEBU_BARANGAYS = [
   "Pung-ol Sibugay",
   "Punta Princesa",
   "Quiot Pardo",
-  "Rahum",
-  "Raim",
-  "Ratay",
   "Ramos",
   "San Antonio",
   "San Jose",
@@ -77,12 +67,8 @@ const CEBU_BARANGAYS = [
   "Santo Niño",
   "Sapangdaku",
   "Sawang Calero",
-  "Señor",
-  "Sibugay",
   "Sinsin",
   "Sirao",
-  "Suba Pasil",
-  "Suba-basbas",
   "Sudlon I",
   "Sudlon II",
   "T. Padilla",
@@ -94,15 +80,166 @@ const CEBU_BARANGAYS = [
   "Tinago",
   "Tisa",
   "To-ong Pardo",
-  "Toong",
   "Tugbongan",
   "Zapatera",
 ];
 
 const VEHICLE_TYPES = [
   { id: "car", label: "Car", icon: "directions_car" },
+  { id: "truck", label: "Truck", icon: "local_shipping" },
   { id: "motorcycle", label: "Motorcycle", icon: "two_wheeler" },
 ];
+
+function BarangayPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return CEBU_BARANGAYS;
+    return CEBU_BARANGAYS.filter((b) => b.toLowerCase().includes(q));
+  }, [search]);
+
+  const handleSelect = (b) => {
+    onChange(b);
+    setOpen(false);
+    setSearch("");
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setSearch("");
+  };
+
+  return (
+    <>
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-10 text-sm text-left transition-all focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 relative"
+      >
+        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">
+          location_on
+        </span>
+        <span className={value ? "text-on-surface" : "text-outline"}>
+          {value || "Select your barangay…"}
+        </span>
+        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">
+          expand_more
+        </span>
+      </button>
+
+      {/* Bottom-sheet overlay */}
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={handleClose}
+          />
+
+          {/* Sheet */}
+          <div className="relative w-full bg-white rounded-t-2xl shadow-2xl flex flex-col max-h-[75vh]">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            </div>
+
+            {/* Header + search */}
+            <div className="px-4 pb-3 shrink-0 border-b border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-[#003366] text-base">Select Barangay</h3>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500"
+                >
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
+
+              {/* Search input */}
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none">
+                  search
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search barangay..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  autoFocus
+                  className="w-full border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <span className="material-symbols-outlined text-base">cancel</span>
+                  </button>
+                )}
+              </div>
+
+              {filtered.length > 0 && (
+                <p className="text-xs text-gray-400 mt-1.5 ml-1">
+                  {filtered.length} barangay{filtered.length !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+
+            {/* List */}
+            <div className="overflow-y-auto flex-1 px-2 py-2">
+              {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <span className="material-symbols-outlined text-4xl mb-2">location_off</span>
+                  <p className="text-sm">No barangay found</p>
+                </div>
+              ) : (
+                filtered.map((b) => {
+                  const selected = value === b;
+                  return (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => handleSelect(b)}
+                      className={`w-full text-left px-4 py-3 rounded-xl flex items-center justify-between text-sm transition-colors active:scale-[0.98] ${
+                        selected
+                          ? "bg-blue-50 text-[#003366] font-semibold"
+                          : "text-gray-800 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`material-symbols-outlined text-base ${
+                            selected ? "text-[#003366]" : "text-gray-300"
+                          }`}
+                        >
+                          location_on
+                        </span>
+                        {b}
+                      </div>
+                      {selected && (
+                        <span className="material-symbols-outlined text-[#003366] text-base">
+                          check_circle
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Safe area spacer for iOS */}
+            <div className="h-safe-area-inset-bottom shrink-0 pb-4" />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function Register({ onBack, onSuccess }) {
   const [vehicleType, setVehicleType] = useState("car");
@@ -173,7 +310,7 @@ export default function Register({ onBack, onSuccess }) {
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
               Vehicle Type
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {VEHICLE_TYPES.map((v) => {
                 const active = vehicleType === v.id;
 
@@ -210,7 +347,7 @@ export default function Register({ onBack, onSuccess }) {
             </label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl">
-                {vehicleType === "motorcycle" ? "two_wheeler" : "directions_car"}
+                {vehicleType === "motorcycle" ? "two_wheeler" : vehicleType === "truck" ? "local_shipping" : "directions_car"}
               </span>
               <input
                 type="text"
@@ -256,29 +393,13 @@ export default function Register({ onBack, onSuccess }) {
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
               Barangay
             </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">
-                location_on
-              </span>
-              <select
-                name="barangay"
-                value={form.barangay}
-                onChange={handleChange}
-                className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-10 text-sm text-on-surface focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all appearance-none"
-              >
-                <option value="" disabled>
-                  Select your barangay…
-                </option>
-                {CEBU_BARANGAYS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">
-                expand_more
-              </span>
-            </div>
+            <BarangayPicker
+              value={form.barangay}
+              onChange={(b) => {
+                setForm((prev) => ({ ...prev, barangay: b }));
+                setError("");
+              }}
+            />
           </div>
 
           {error && (
