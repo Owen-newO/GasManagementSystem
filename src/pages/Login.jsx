@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { login as authLogin } from "../services/authService";
 
 export default function Login({ onBack, onSuccess }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [forgotView, setForgotView] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
@@ -12,17 +14,20 @@ export default function Login({ onBack, onSuccess }) {
     setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.email.trim() || !form.password.trim()) {
       setError("All fields are required.");
       return;
     }
-    onSuccess({
-      email: form.email.trim(),
-      role: "station",
-      loginAt: new Date().toISOString(),
-    });
+    setLoading(true);
+    const result = await authLogin({ email: form.email.trim(), password: form.password });
+    setLoading(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    onSuccess(result.user, result.token, result.role);
   };
 
   const handleResetSubmit = (e) => {
@@ -128,9 +133,10 @@ export default function Login({ onBack, onSuccess }) {
 
               <button
                 type="submit"
-                className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
+                disabled={loading}
+                className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Log In
+                {loading ? "Signing in…" : "Log In"}
               </button>
             </form>
           </>

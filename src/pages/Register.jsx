@@ -457,7 +457,10 @@ export default function Register({ onBack, onSuccess }) {
     lastName: "",
     firstName: "",
     barangay: "",
+    email: "",
+    password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -468,10 +471,21 @@ export default function Register({ onBack, onSuccess }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { plate, lastName, firstName, barangay } = form;
+    const { plate, lastName, firstName, barangay, email, password } = form;
 
-    if (!plate.trim() || !lastName.trim() || !firstName.trim() || !barangay || !gasType) {
+    if (!plate.trim() || !lastName.trim() || !firstName.trim() || !barangay || !gasType || !email.trim() || !password.trim()) {
       setError("All fields are required.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
 
@@ -479,7 +493,7 @@ export default function Register({ onBack, onSuccess }) {
   };
 
   const handleConfirm = () => {
-    const { plate, lastName, firstName, barangay } = form;
+    const { plate, lastName, firstName, barangay, email, password } = form;
     setShowConfirm(false);
     onSuccess({
       vehicleType,
@@ -488,6 +502,8 @@ export default function Register({ onBack, onSuccess }) {
       lastName: lastName.trim(),
       barangay,
       gasType,
+      email: email.trim().toLowerCase(),
+      password,
       role: "resident",
       registeredAt: new Date().toISOString(),
     });
@@ -510,6 +526,7 @@ export default function Register({ onBack, onSuccess }) {
               <div className="flex justify-between"><span className="text-gray-500">Plate No.</span><span className="font-medium text-gray-800 uppercase">{form.plate}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Gas Type</span><span className="font-medium text-gray-800">{gasType}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Barangay</span><span className="font-medium text-gray-800">{form.barangay}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="font-medium text-gray-800 truncate max-w-[180px]">{form.email}</span></div>
             </div>
             <div className="flex gap-3">
               <button
@@ -517,14 +534,14 @@ export default function Register({ onBack, onSuccess }) {
                 onClick={() => setShowConfirm(false)}
                 className="flex-1 border border-outline-variant text-on-surface font-bold py-3 rounded-xl active:scale-95 transition-all"
               >
-                No
+                Decline
               </button>
               <button
                 type="button"
                 onClick={handleConfirm}
                 className="flex-1 bg-primary-container text-white font-bold py-3 rounded-xl shadow active:scale-95 transition-all"
               >
-                Yes
+                Confirm
               </button>
             </div>
           </div>
@@ -662,6 +679,49 @@ export default function Register({ onBack, onSuccess }) {
                 setError("");
               }}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              Email
+            </label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">mail</span>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="e.g. juan@email.com"
+                className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-4 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              Password
+            </label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">lock</span>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Min. 6 characters"
+                className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-12 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((p) => !p)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+              >
+                <span className="material-symbols-outlined text-xl">
+                  {showPassword ? "visibility_off" : "visibility"}
+                </span>
+              </button>
+            </div>
           </div>
 
           {error && (
