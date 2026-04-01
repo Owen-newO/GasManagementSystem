@@ -1,4 +1,4 @@
-export default function AuthLanding({ onLogin, onResidentRegister }) {
+export default function StationAuthLanding({ onBack, onLogin, onRegister }) {
   return (
     <div className="flex flex-col min-h-dvh bg-primary-container">
       <div
@@ -8,6 +8,13 @@ export default function AuthLanding({ onLogin, onResidentRegister }) {
             "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20 L20 0 M20 40 L40 20 M0 0 L40 40' stroke='%23ffffff' stroke-width='1' fill='none' opacity='0.05'/%3E%3C/svg%3E\")",
         }}
       >
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all text-white"
+        >
+          <span className="material-symbols-outlined">arrow_back</span>
+        </button>
+
         <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center mb-6 shadow-2xl">
           <span
             className="material-symbols-outlined text-yellow-400"
@@ -18,25 +25,25 @@ export default function AuthLanding({ onLogin, onResidentRegister }) {
         </div>
 
         <p className="text-on-primary-container text-[11px] font-black uppercase tracking-[0.2em] mb-1">
-          Official Portal
+          Station Portal
         </p>
 
         <h1 className="font-headline font-black text-white text-4xl text-center leading-tight mb-2">
-          Fuel Rationing System
+          Officer Access
         </h1>
 
         <p className="text-white/60 text-sm text-center max-w-[260px] leading-relaxed">
-          Fuel allocation validation system for Cebu City residents
+          Manage fuel dispensing and validate resident allocations at your station
         </p>
       </div>
 
       <div className="bg-background rounded-t-3xl px-6 pt-8 pb-12 space-y-4 shadow-2xl">
         <div className="space-y-1 mb-6">
           <h2 className="font-headline font-extrabold text-primary text-2xl">
-            Get Started
+            Station Login
           </h2>
           <p className="text-on-surface-variant text-sm">
-            Sign in to access your portal.
+            Sign in to your station officer account.
           </p>
         </div>
 
@@ -44,20 +51,14 @@ export default function AuthLanding({ onLogin, onResidentRegister }) {
           onClick={onLogin}
           className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
         >
-          Sign In
+          Log In
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-outline-variant" />
-          <span className="text-xs text-on-surface-variant">New here?</span>
-          <div className="flex-1 h-px bg-outline-variant" />
-        </div>
-
         <button
-          onClick={onResidentRegister}
-          className="w-full bg-tertiary text-on-tertiary font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
+          onClick={onRegister}
+          className="w-full bg-surface-container-high text-on-surface font-headline font-bold py-4 rounded-xl border border-outline-variant active:scale-95 transition-all"
         >
-          Register as Resident
+          Register Station
         </button>
 
         <p className="text-center text-[10px] text-outline pt-2">

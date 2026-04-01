@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { loginResident } from "../services/authService";
+import { loginAdmin } from "../services/authService";
 
-export default function ResidentLogin({ onBack, onSuccess }) {
-  const [form, setForm] = useState({ firstName: "", lastName: "", plate: "" });
+export default function AdminLogin({ onBack, onSuccess }) {
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -14,7 +14,7 @@ export default function ResidentLogin({ onBack, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const result = await loginResident(form);
+    const result = await loginAdmin(form);
     setLoading(false);
     if (!result.success) {
       setError(result.error);
@@ -34,7 +34,7 @@ export default function ResidentLogin({ onBack, onSuccess }) {
         </button>
         <div>
           <h1 className="text-[#003366] font-headline font-bold text-lg leading-none">
-            Resident Login
+            Admin Login
           </h1>
           <p className="text-[10px] text-[#003366] font-black uppercase tracking-wider opacity-70">
             Fuel Rationing System
@@ -49,55 +49,43 @@ export default function ResidentLogin({ onBack, onSuccess }) {
               className="material-symbols-outlined text-white"
               style={{ fontSize: "40px", fontVariationSettings: "'FILL' 1" }}
             >
-              person
+              admin_panel_settings
             </span>
           </div>
-          <h2 className="font-headline font-extrabold text-primary text-2xl">Welcome Back</h2>
+          <h2 className="font-headline font-extrabold text-primary text-2xl">
+            CMS Admin Portal
+          </h2>
           <p className="text-on-surface-variant text-sm text-center mt-1">
-            Enter your resident details to continue.
+            Restricted access — authorized personnel only.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              First Name
+              Email
             </label>
             <input
-              type="text"
-              name="firstName"
-              value={form.firstName}
+              type="email"
+              name="email"
+              value={form.email}
               onChange={handleChange}
-              placeholder="e.g. Juan"
+              placeholder="e.g. admin@fuelsystem.gov"
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
             />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Last Name
+              Password
             </label>
             <input
-              type="text"
-              name="lastName"
-              value={form.lastName}
+              type="password"
+              name="password"
+              value={form.password}
               onChange={handleChange}
-              placeholder="e.g. Dela Cruz"
+              placeholder="Enter your password"
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Plate Number
-            </label>
-            <input
-              type="text"
-              name="plate"
-              value={form.plate}
-              onChange={handleChange}
-              placeholder="e.g. ABC-1234"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm uppercase"
             />
           </div>
 
@@ -113,7 +101,7 @@ export default function ResidentLogin({ onBack, onSuccess }) {
             disabled={loading}
             className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? "Signing in…" : "Log In"}
+            {loading ? "Verifying…" : "Log In"}
           </button>
         </form>
       </main>

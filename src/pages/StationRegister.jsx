@@ -165,6 +165,7 @@ export default function StationRegister({ onBack, onSuccess }) {
     barangay: "",
     brand: "",
     officerFirstName: "",
+    googleEmail: "",
     capacity: "",
     stationCode: "",
   });
@@ -178,12 +179,13 @@ export default function StationRegister({ onBack, onSuccess }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const { barangay, brand, officerFirstName, capacity, stationCode } = form;
+    const { barangay, brand, officerFirstName, googleEmail, capacity, stationCode } = form;
 
     if (
       !barangay ||
       !brand ||
       !officerFirstName.trim() ||
+      !googleEmail.trim() ||
       !capacity.toString().trim() ||
       !stationCode.trim()
     ) {
@@ -195,6 +197,7 @@ export default function StationRegister({ onBack, onSuccess }) {
       barangay,
       brand,
       officerFirstName: officerFirstName.trim(),
+      googleEmail: googleEmail.trim(),
       capacity,
       stationCode: stationCode.trim().toUpperCase(),
       role: "station",
@@ -274,6 +277,20 @@ export default function StationRegister({ onBack, onSuccess }) {
               value={form.officerFirstName}
               onChange={handleChange}
               placeholder="e.g. Juan"
+              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              Google Email
+            </label>
+            <input
+              type="email"
+              name="googleEmail"
+              value={form.googleEmail}
+              onChange={handleChange}
+              placeholder="e.g. juan@gmail.com"
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
             />
           </div>
