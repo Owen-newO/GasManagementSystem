@@ -155,43 +155,19 @@ export default function Login({ onBack, onSuccess }) {
               </p>
             </div>
 
-            {resetSent ? (
-              <div className="space-y-4">
-                <div className="flex flex-col items-center gap-3 bg-surface-container px-6 py-8 rounded-2xl text-center">
-                  <span
-                    className="material-symbols-outlined text-primary"
-                    style={{ fontSize: "48px", fontVariationSettings: "'FILL' 1" }}
-                  >
-                    mark_email_read
-                  </span>
-                  <p className="font-semibold text-on-surface">Check your inbox</p>
-                  <p className="text-sm text-on-surface-variant">
-                    A password reset link was sent to{" "}
-                    <span className="font-semibold text-on-surface">{resetEmail}</span>.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleBackToLogin}
-                  className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
-                >
-                  Back to Sign In
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleResetSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => { setResetEmail(e.target.value); setError(""); }}
-                    placeholder="Enter your email"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              Station ID
+            </label>
+            <input
+              type="text"
+              name="stationId"
+              value={form.stationId}
+              onChange={handleChange}
+              placeholder="e.g. STN-001"
+              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm uppercase"
+            />
+          </div>
 
                 {error && (
                   <div className="flex items-center gap-2 bg-error-container text-on-error-container px-4 py-3 rounded-xl text-sm">
