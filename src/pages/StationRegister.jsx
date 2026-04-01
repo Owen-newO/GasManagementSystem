@@ -169,6 +169,7 @@ export default function StationRegister({ onBack, onSuccess }) {
     stationCode: "",
   });
   const [error, setError] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -191,6 +192,12 @@ export default function StationRegister({ onBack, onSuccess }) {
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const handleConfirm = () => {
+    const { barangay, brand, officerFirstName, capacity, stationCode } = form;
+    setShowConfirm(false);
     onSuccess({
       barangay,
       brand,
@@ -204,6 +211,41 @@ export default function StationRegister({ onBack, onSuccess }) {
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowConfirm(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl mx-6 p-6 w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-[#003366] text-3xl">help</span>
+              <h3 className="font-headline font-bold text-[#003366] text-lg">Confirm Registration</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Are you sure your information is correct?</p>
+            <div className="bg-gray-50 rounded-xl p-4 space-y-1.5 text-sm mb-5">
+              <div className="flex justify-between"><span className="text-gray-500">Barangay</span><span className="font-medium text-gray-800">{form.barangay}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Brand</span><span className="font-medium text-gray-800">{form.brand}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Manager</span><span className="font-medium text-gray-800">{form.officerFirstName}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Capacity</span><span className="font-medium text-gray-800">{form.capacity} L</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Station No.</span><span className="font-medium text-gray-800 uppercase">{form.stationCode}</span></div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 border border-outline-variant text-on-surface font-bold py-3 rounded-xl active:scale-95 transition-all"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="flex-1 bg-primary-container text-white font-bold py-3 rounded-xl shadow active:scale-95 transition-all"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3 px-6 py-4 bg-slate-100/80 backdrop-blur-md shadow-sm sticky top-0 z-40">
         <button
           onClick={onBack}
@@ -294,7 +336,7 @@ export default function StationRegister({ onBack, onSuccess }) {
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Station ID
+              Station Number
             </label>
             <input
               type="text"

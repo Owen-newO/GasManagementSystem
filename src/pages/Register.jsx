@@ -459,6 +459,7 @@ export default function Register({ onBack, onSuccess }) {
     barangay: "",
   });
   const [error, setError] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -474,6 +475,12 @@ export default function Register({ onBack, onSuccess }) {
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const handleConfirm = () => {
+    const { plate, lastName, firstName, barangay } = form;
+    setShowConfirm(false);
     onSuccess({
       vehicleType,
       plate: plate.trim().toUpperCase(),
@@ -488,6 +495,41 @@ export default function Register({ onBack, onSuccess }) {
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowConfirm(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl mx-6 p-6 w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-[#003366] text-3xl">help</span>
+              <h3 className="font-headline font-bold text-[#003366] text-lg">Confirm Registration</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Are you sure your information is correct?</p>
+            <div className="bg-gray-50 rounded-xl p-4 space-y-1.5 text-sm mb-5">
+              <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium text-gray-800">{form.firstName} {form.lastName}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Vehicle</span><span className="font-medium text-gray-800 capitalize">{vehicleType}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Plate No.</span><span className="font-medium text-gray-800 uppercase">{form.plate}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Gas Type</span><span className="font-medium text-gray-800">{gasType}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Barangay</span><span className="font-medium text-gray-800">{form.barangay}</span></div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 border border-outline-variant text-on-surface font-bold py-3 rounded-xl active:scale-95 transition-all"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="flex-1 bg-primary-container text-white font-bold py-3 rounded-xl shadow active:scale-95 transition-all"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3 px-6 py-4 bg-slate-100/80 backdrop-blur-md shadow-sm sticky top-0 z-40">
         <button
           onClick={onBack}
@@ -529,7 +571,7 @@ export default function Register({ onBack, onSuccess }) {
                     key={v.id}
                     type="button"
                     onClick={() => setVehicleType(v.id)}
-                    className={`flex items-center justify-center gap-3 py-4 rounded-xl border-2 font-headline font-bold text-sm transition-all active:scale-95 ${
+                    className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl border-2 font-headline font-bold text-sm transition-all active:scale-95 ${
                       active
                         ? "bg-primary-container border-primary-container text-white shadow-lg"
                         : "bg-surface-container-lowest border-outline-variant text-on-surface-variant hover:border-primary-container/40"
