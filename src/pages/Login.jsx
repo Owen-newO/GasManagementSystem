@@ -97,7 +97,7 @@ export default function Login({ onBack, onSuccess }) {
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Station ID
+              Station Number
             </label>
             <input
               type="text"
