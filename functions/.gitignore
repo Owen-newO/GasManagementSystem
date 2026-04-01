@@ -1,0 +1,21 @@
+# Compiled JavaScript files
+lib/**/*.js
+lib/**/*.js.map
+
+# TypeScript v1 declaration files
+typings/
+
+# Node.js dependency directory
+node_modules/
+*.local
+
+# Environment variables / local secrets
+.env
+.env.*
+
+# Firebase local emulator/cache artifacts
+.firebase/
+firebase-debug.log*
+
+# Legacy Functions config export (if you ever use it)
+.runtimeconfig.json
