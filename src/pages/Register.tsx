@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { httpsCallable, functions } from "../firebase";
 
 // Official 80 barangays of Cebu City
 const CEBU_BARANGAYS = [
@@ -83,6 +84,21 @@ const CEBU_BARANGAYS = [
   "Tugbongan",
   "Zapatera",
 ];
+
+const NAME_INPUT_MAX_LENGTH = 50;
+/** Longest Cebu City barangay label — caps search typing; selection is always from the list. */
+const BARANGAY_LIST_MAX_LENGTH = Math.max(...CEBU_BARANGAYS.map((b) => b.length));
+const PASSWORD_MIN_LEN = 8;
+const PASSWORD_MAX_LEN = 128;
+
+function passwordMeetsPolicy(p: string): boolean {
+  return (
+    p.length >= PASSWORD_MIN_LEN &&
+    p.length <= PASSWORD_MAX_LEN &&
+    /[A-Za-z]/.test(p) &&
+    /\d/.test(p)
+  );
+}
 
 const GAS_TYPES = [
   {
@@ -376,7 +392,8 @@ function BarangayPicker({ value, onChange }) {
                   type="text"
                   placeholder="Search barangay..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value.slice(0, BARANGAY_LIST_MAX_LENGTH))}
+                  maxLength={BARANGAY_LIST_MAX_LENGTH}
                   autoFocus
                   className="w-full border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
@@ -463,6 +480,7 @@ export default function Register({ onBack, onSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -484,29 +502,64 @@ export default function Register({ onBack, onSuccess }) {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (firstName.trim().length > NAME_INPUT_MAX_LENGTH) {
+      setError(`First name must be at most ${NAME_INPUT_MAX_LENGTH} characters.`);
+      return;
+    }
+    if (lastName.trim().length > NAME_INPUT_MAX_LENGTH) {
+      setError(`Last name must be at most ${NAME_INPUT_MAX_LENGTH} characters.`);
+      return;
+    }
+
+    if (!passwordMeetsPolicy(password)) {
+      setError(
+        `Password must be ${PASSWORD_MIN_LEN}–${PASSWORD_MAX_LEN} characters and include at least one letter and one number.`
+      );
       return;
     }
 
     setShowConfirm(true);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const { plate, lastName, firstName, barangay, email, password } = form;
-    setShowConfirm(false);
-    onSuccess({
-      vehicleType,
-      plate: plate.trim().toUpperCase(),
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      barangay,
-      gasType,
-      email: email.trim().toLowerCase(),
-      password,
-      role: "resident",
-      registeredAt: new Date().toISOString(),
-    });
+    setLoading(true);
+    setError("");
+    try {
+      const registerResident = httpsCallable<Record<string, unknown>, { uid: string }>(
+        functions,
+        "registerResident"
+      );
+      const result = await registerResident({
+        vehicleType,
+        plateNo: plate.trim().toUpperCase(),
+        fuelType: gasType,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        barangay,
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      setShowConfirm(false);
+      onSuccess({
+        uid: result.data.uid,
+        vehicleType,
+        plate: plate.trim().toUpperCase(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        barangay,
+        gasType,
+        email: email.trim().toLowerCase(),
+        role: "resident",
+        registeredAt: new Date().toISOString(),
+      });
+    } catch (err: unknown) {
+      const firebaseError = err as { message?: string };
+      setShowConfirm(false);
+      setError(firebaseError.message ?? "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -539,9 +592,17 @@ export default function Register({ onBack, onSuccess }) {
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="flex-1 bg-primary-container text-white font-bold py-3 rounded-xl shadow active:scale-95 transition-all"
+                disabled={loading}
+                className="flex-1 bg-primary-container text-white font-bold py-3 rounded-xl shadow active:scale-95 transition-all disabled:opacity-60 disabled:active:scale-100 flex items-center justify-center gap-2"
               >
-                Confirm
+                {loading ? (
+                  <>
+                    <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                    Registering…
+                  </>
+                ) : (
+                  "Confirm"
+                )}
               </button>
             </div>
           </div>
@@ -623,7 +684,7 @@ export default function Register({ onBack, onSuccess }) {
                 name="plate"
                 value={form.plate}
                 onChange={handleChange}
-                placeholder={vehicleType === "motorcycle" ? "e.g. 1234AB" : "e.g. ABC-1234"}
+                placeholder={vehicleType === "motorcycle" ? "e.g. 1234AB" : "e.g. ABC1234"}
                 maxLength={10}
                 className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-4 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all uppercase tracking-widest font-bold"
               />
@@ -650,6 +711,7 @@ export default function Register({ onBack, onSuccess }) {
               value={form.firstName}
               onChange={handleChange}
               placeholder="e.g. Juan"
+              maxLength={NAME_INPUT_MAX_LENGTH}
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
             />
           </div>
@@ -664,6 +726,7 @@ export default function Register({ onBack, onSuccess }) {
               value={form.lastName}
               onChange={handleChange}
               placeholder="e.g. Dela Cruz"
+              maxLength={NAME_INPUT_MAX_LENGTH}
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
             />
           </div>
@@ -709,7 +772,9 @@ export default function Register({ onBack, onSuccess }) {
                 name="password"
                 value={form.password}
                 onChange={handleChange}
-                placeholder="Min. 6 characters"
+                placeholder="8+ chars, letter & number"
+                maxLength={PASSWORD_MAX_LEN}
+                autoComplete="new-password"
                 className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-12 text-sm"
               />
               <button
