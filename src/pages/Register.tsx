@@ -1,4 +1,45 @@
 import React, { useState, useMemo } from "react";
+import { FirebaseError } from "firebase/app";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase";
+import type { AuthUser } from "../services/authService";
+
+function httpErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return "Registration failed. Please try again.";
+}
+
+function getRegisterResidentUrl(): string {
+  const projectId = import.meta.env.VITE_PUBLIC_FIREBASE_PROJECT_ID as string | undefined;
+  const useEmu = import.meta.env.VITE_PUBLIC_USE_EMULATOR === "true";
+  if (import.meta.env.DEV && useEmu && projectId) {
+    return `http://127.0.0.1:5001/${projectId}/asia-southeast1/registerResident`;
+  }
+  return "https://asia-southeast1-agas-fuel-rationing-system.cloudfunctions.net/registerResident";
+}
+
+async function registerResidentHttp(payload: Record<string, unknown>): Promise<{ uid?: string }> {
+  const res = await fetch(getRegisterResidentUrl(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as
+    | { uid?: string }
+    | { error?: { message?: string } };
+
+  if (!res.ok) {
+    const message =
+      (typeof json === "object" &&
+        json &&
+        "error" in json &&
+        (json as { error?: { message?: string } }).error?.message) ||
+      "Registration failed.";
+    throw new Error(message);
+  }
+  return json as { uid?: string };
+}
 
 const CEBU_BARANGAYS = [
   "Adlaon","Agsungot","Apas","Babag","Bacayan","Banilad","Basak Pardo","Basak San Nicolas",
@@ -142,6 +183,8 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmError, setConfirmError] = useState("");
+  const [registering, setRegistering] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -180,23 +223,54 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
       return;
     }
     setError("");
+    setConfirmError("");
     setShowConfirm(true);
   };
 
-  const handleConfirm = () => {
-    setShowConfirm(false);
-    onSuccess({
-      vehicleType,
-      plate: form.plate.trim().toUpperCase(),
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim(),
-      barangay: form.barangay,
-      gasType,
-      email: form.email.trim().toLowerCase(),
-      password: form.password,
-      role: "resident",
-      registeredAt: new Date().toISOString(),
-    });
+  const handleConfirm = async () => {
+    setConfirmError("");
+    setRegistering(true);
+    const email = form.email.trim().toLowerCase();
+    const plate = form.plate.trim().toUpperCase();
+    try {
+      const data = await registerResidentHttp({
+        vehicleType,
+        plate,
+        gasType,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        barangay: form.barangay,
+        email,
+        password: form.password,
+      });
+      const cred = await signInWithEmailAndPassword(auth, email, form.password);
+      const token = await cred.user.getIdToken();
+
+      const authUser: AuthUser = {
+        email,
+        role: "resident",
+        loginAt: new Date().toISOString(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        plate,
+        barangay: form.barangay,
+        vehicleType,
+        gasType,
+        registeredAt: new Date().toISOString(),
+        uid: data.uid ?? cred.user.uid,
+      };
+      setShowConfirm(false);
+      onSuccess({ ...authUser, token });
+    } catch (err) {
+      // Keep FirebaseError handling for the immediate sign-in step.
+      if (err instanceof FirebaseError) {
+        setConfirmError(err.message || "Registration failed.");
+      } else {
+        setConfirmError(httpErrorMessage(err));
+      }
+    } finally {
+      setRegistering(false);
+    }
   };
 
   const handleBack = () => {
@@ -230,14 +304,27 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
               <div className="flex justify-between"><span className="text-gray-500">Plate No.</span><span className="font-medium text-gray-800 uppercase tracking-widest">{form.plate}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Fuel Type</span><span className="font-medium text-gray-800">{gasType}</span></div>
             </div>
+            {confirmError && (
+              <div className="flex items-center gap-2 bg-error-container text-on-error-container px-4 py-3 rounded-xl text-sm mb-4">
+                <span className="material-symbols-outlined text-base shrink-0">error</span>
+                {confirmError}
+              </div>
+            )}
             <div className="flex gap-3">
-              <button type="button" onClick={() => setShowConfirm(false)}
-                className="flex-1 border border-outline-variant text-on-surface font-bold py-3 rounded-xl active:scale-95 transition-all">
+              <button type="button" disabled={registering} onClick={() => setShowConfirm(false)}
+                className="flex-1 border border-outline-variant text-on-surface font-bold py-3 rounded-xl active:scale-95 transition-all disabled:opacity-50">
                 Edit
               </button>
-              <button type="button" onClick={handleConfirm}
-                className="flex-1 bg-primary-container text-white font-bold py-3 rounded-xl shadow active:scale-95 transition-all">
-                Confirm
+              <button type="button" disabled={registering} onClick={() => void handleConfirm()}
+                className="flex-1 bg-primary-container text-white font-bold py-3 rounded-xl shadow active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+                {registering ? (
+                  <>
+                    <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
+                    Registering…
+                  </>
+                ) : (
+                  "Confirm"
+                )}
               </button>
             </div>
           </div>

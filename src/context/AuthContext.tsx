@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { validateToken } from "../services/authService";
-import type { AuthUser, Role } from "../services/authService";
+import { signOut } from "firebase/auth";
+import { auth as firebaseAuth } from "../firebase";
+import { parseStoredSession } from "../services/authService";
+import type { AuthUser, Role, StoredSession } from "../services/authService";
 
 interface AuthState {
   user: AuthUser | null;
@@ -18,6 +20,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = "frs_auth_token";
+const SESSION_KEY = "frs_auth_session";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -35,14 +38,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Restore session on mount
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
-    if (token) {
-      const payload = validateToken(token);
-      if (payload) {
-        setAuth({ user: payload.user, role: payload.role, isAuthenticated: true });
+    const rawSession = localStorage.getItem(SESSION_KEY);
+    if (token && rawSession) {
+      const session = parseStoredSession(rawSession) as StoredSession | null;
+      if (session?.token === token) {
+        setAuth({ user: session.user, role: session.role, isAuthenticated: true });
       } else {
-        // Token expired — clean up
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(SESSION_KEY);
       }
+    } else if (token || rawSession) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
     }
     setLoading(false);
   }, []);
@@ -53,6 +60,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const login = (user: AuthUser, role: Role, token: string): void => {
     localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ user, role, token, loginAt: new Date().toISOString() })
+    );
     setAuth({ user, role, isAuthenticated: true });
   };
 
@@ -60,7 +71,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Clears all auth state and removes the persisted token.
    */
   const logout = (): void => {
+    void signOut(firebaseAuth).catch(() => undefined);
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(SESSION_KEY);
     setAuth({ user: null, role: null, isAuthenticated: false });
   };
 

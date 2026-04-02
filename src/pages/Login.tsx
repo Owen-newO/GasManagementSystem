@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { login as authLogin } from "../services/authService";
 import type { AuthUser, Role } from "../services/authService";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../firebase";
 
 interface LoginProps {
   onBack: () => void;
@@ -15,6 +17,7 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
   const [forgotView, setForgotView] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState<string>("");
   const [resetSent, setResetSent] = useState<boolean>(false);
+  const [resetLoading, setResetLoading] = useState<boolean>(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -37,14 +40,34 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
     onSuccess(result.user!, result.token, result.role);
   };
 
-  const handleResetSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleResetSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    if (!resetEmail.trim()) {
+    const email = resetEmail.trim();
+    if (!email) {
       setError("Please enter your email address.");
       return;
     }
-    setResetSent(true);
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setResetLoading(true);
     setError("");
+    try {
+      // Avoid account enumeration: show success UI even if the email doesn't exist.
+      const actionCodeSettings = {
+        url: window.location.origin + window.location.pathname,
+        handleCodeInApp: true,
+      };
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+    } catch {
+      // Intentionally ignored (still show the generic success message).
+    } finally {
+      setResetLoading(false);
+      setResetSent(true);
+    }
   };
 
   const handleBackToLogin = (): void => {
@@ -179,8 +202,8 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
                   </span>
                   <p className="font-semibold text-on-surface">Check your inbox</p>
                   <p className="text-sm text-on-surface-variant">
-                    A password reset link was sent to{" "}
-                    <span className="font-semibold text-on-surface">{resetEmail}</span>.
+                    If an account exists for{" "}
+                    <span className="font-semibold text-on-surface">{resetEmail}</span>, we’ll send a password reset link.
                   </p>
                 </div>
                 <button
@@ -216,8 +239,9 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
                 <button
                   type="submit"
                   className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
+                  disabled={resetLoading}
                 >
-                  Send Reset Link
+                  {resetLoading ? "Sending…" : "Send Reset Link"}
                 </button>
 
                 <button

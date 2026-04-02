@@ -1,11 +1,10 @@
 /**
- * Auth Service — simulates backend API middleware validation.
+ * Auth Service — Firebase Auth + Firestore-backed login.
  *
- * Unified login maps to: POST /api/auth/login
- * The backend inspects credentials, determines the role, and returns a token.
- *
- * Replace the mock logic with a real fetch() call when a backend is ready.
- * The return shape { success, user, role, token } stays the same.
+ * Unified login:
+ * - sign in with Firebase Auth (email + password)
+ * - fetch the user's profile/role from Firestore `accounts/{uid}`
+ * - return { success, user, role, token }
  */
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
@@ -29,73 +28,89 @@ export interface AuthResult {
   error?: string;
 }
 
-// ─── Mock user store (replace with real DB on backend) ───────────────────────
-interface MockUser {
-  email: string;
-  password: string;
-  role: Role;
-}
-
-const MOCK_USERS: MockUser[] = [
-  { email: "admin@fuelsystem.gov",  password: "Admin@2024",    role: "admin"    },
-  { email: "officer@station.com",   password: "Officer@2024",  role: "station"  },
-  { email: "juan@gmail.com",        password: "Resident@2024", role: "resident" },
-];
-
-// ─── Token helpers ────────────────────────────────────────────────────────────
-// Base64-encoded payload with 8-hour expiry.
-// In production this would be a signed JWT issued by the backend.
-
-interface TokenPayload {
+// ─── Session helpers (stored alongside token) ─────────────────────────────────
+export interface StoredSession {
   user: AuthUser;
   role: Role;
-  exp: number;
+  token: string;
+  loginAt: string;
 }
 
-function generateToken(user: AuthUser, role: Role): string {
-  const payload: TokenPayload = { user, role, exp: Date.now() + 8 * 60 * 60 * 1000 };
-  return btoa(JSON.stringify(payload));
-}
-
-export function validateToken(token: string): TokenPayload | null {
+export function parseStoredSession(raw: string): StoredSession | null {
   try {
-    const payload: TokenPayload = JSON.parse(atob(token));
-    if (Date.now() > payload.exp) return null; // expired
-    return payload;                             // { user, role, exp }
+    const parsed = JSON.parse(raw) as StoredSession;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed.token || typeof parsed.token !== "string") return null;
+    if (!parsed.role) return null;
+    if (!parsed.user) return null;
+    return parsed;
   } catch {
     return null;
   }
 }
 
 // ─── Unified login ────────────────────────────────────────────────────────────
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 export async function login({ email, password }: { email: string; password: string }): Promise<AuthResult> {
-  // Simulated network latency — remove when using real fetch()
-  await new Promise((r) => setTimeout(r, 600));
-
   if (!email?.trim() || !password?.trim()) {
     return { success: false, error: "All fields are required." };
   }
 
-  // In production:
-  // const res  = await fetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
-  // const data = await res.json();
-  // if (!res.ok) return { success: false, error: data.message };
-  // return { success: true, user: data.user, role: data.role, token: data.token };
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const cred = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    const uid = cred.user.uid;
+    const token = await cred.user.getIdToken();
 
-  const found = MOCK_USERS.find(
-    (u) => u.email === email.trim().toLowerCase() && u.password === password
-  );
+    const snap = await getDoc(doc(db, "accounts", uid));
+    if (!snap.exists()) {
+      return { success: false, error: "Account profile not found. Please contact support." };
+    }
 
-  if (!found) {
-    return { success: false, error: "Invalid email or password." };
+    const data = snap.data() as Record<string, unknown>;
+    const role = data.role as Role | undefined;
+    if (role !== "resident" && role !== "station" && role !== "admin") {
+      return { success: false, error: "Account role is invalid. Please contact support." };
+    }
+
+    const registeredAtRaw = data.registeredAt as unknown;
+    const registeredAt =
+      registeredAtRaw instanceof Timestamp
+        ? registeredAtRaw.toDate().toISOString()
+        : typeof registeredAtRaw === "string"
+          ? registeredAtRaw
+          : undefined;
+
+    const user: AuthUser = {
+      uid,
+      email: (data.email as string | undefined) ?? normalizedEmail,
+      role,
+      loginAt: new Date().toISOString(),
+      firstName: data.firstName as string | undefined,
+      lastName: data.lastName as string | undefined,
+      plate: data.plate as string | undefined,
+      barangay: data.barangay as string | undefined,
+      vehicleType: data.vehicleType as string | undefined,
+      gasType: data.gasType as string | undefined,
+      registeredAt,
+    };
+
+    return { success: true, user, role, token };
+  } catch (err: unknown) {
+    const msg =
+      err && typeof err === "object" && "code" in err
+        ? String((err as { code?: string }).code)
+        : "";
+    if (msg === "auth/invalid-email") return { success: false, error: "Invalid email address." };
+    if (msg === "auth/user-not-found" || msg === "auth/wrong-password" || msg === "auth/invalid-credential") {
+      return { success: false, error: "Invalid email or password." };
+    }
+    if (msg === "auth/too-many-requests") {
+      return { success: false, error: "Too many attempts. Please try again later." };
+    }
+    return { success: false, error: "Login failed. Please try again." };
   }
-
-  const user: AuthUser = {
-    email: found.email,
-    role: found.role,
-    loginAt: new Date().toISOString(),
-  };
-
-  return { success: true, user, role: found.role, token: generateToken(user, found.role) };
 }

@@ -105,7 +105,7 @@ export default function App() {
   // ─── Register handlers ─────────────────────────────────────────────────────
   const handleResidentRegisterSuccess = (residentData) => {
     setResident(residentData);
-    login(residentData, "resident", undefined);
+    login(residentData, "resident", residentData.token);
     setScreen("user-dashboard");
     setActiveTab("dashboard");
   };
