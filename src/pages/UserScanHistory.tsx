@@ -3,7 +3,7 @@ import BottomNav from "../components/BottomNav";
 
 const USER_TABS = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard" },
-  { id: "user-history", icon: "receipt_long", label: "Transaction History" },
+  { id: "user-history", icon: "receipt_long", label: "Transactions" },
   { id: "map", icon: "map", label: "Map" },
   { id: "settings", icon: "account_circle", label: "Account" },
 ];
@@ -26,7 +26,7 @@ function parseTxDate(dateStr: string): Date {
   return new Date(dateStr);
 }
 
-export default function UserScanHistory({ activeTab, onTabChange, resident }) {
+export default function UserScanHistory({ activeTab, onTabChange, resident, onShowQR }) {
   const [filter, setFilter] = useState("all");
 
   // "Gasoline" residents see Regular fuel; "Diesel" residents see Diesel
@@ -68,7 +68,7 @@ export default function UserScanHistory({ activeTab, onTabChange, resident }) {
       <div className="flex items-center px-6 py-4 bg-primary-container shadow-sm sticky top-0 z-40">
         <div className="flex-1 flex flex-col items-center">
           <h1 className="text-white font-headline font-bold text-lg leading-none">
-            Transaction History
+            Transactions History
           </h1>
           <p className="text-[10px] text-white/70 font-bold uppercase tracking-wider mt-0.5">
             Your fuel transaction records
@@ -155,6 +155,18 @@ export default function UserScanHistory({ activeTab, onTabChange, resident }) {
           </div>
         )}
       </main>
+
+      {/* Floating QR button */}
+      <div className="fixed bottom-32 left-0 right-0 flex justify-center z-40 pointer-events-none">
+        <button
+          type="button"
+          onClick={onShowQR}
+          className="pointer-events-auto flex items-center gap-2 bg-[#003366] text-white font-headline font-bold px-6 py-3.5 rounded-full shadow-[0_8px_32px_rgba(0,51,102,0.45)] active:scale-95 transition-all border-2 border-white/20"
+        >
+          <span className="material-symbols-outlined icon-fill">qr_code</span>
+          View My QR Code
+        </button>
+      </div>
 
       <BottomNav active={activeTab} onChange={onTabChange} tabs={USER_TABS} />
     </div>
