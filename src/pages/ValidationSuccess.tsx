@@ -1,23 +1,66 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BottomNav from "../components/BottomNav";
 import { formatDecodedDate } from "../utils/qrCodec";
 
-const RESIDENT_IMG =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAXqfapZS-XB6Ex6q9gvjpqo49kBnsKSV_xUi6169zZVPThLwv48yJSCJsg3D7IyBEQdesNhfzMVu4GbPrY-h_mMN48GNkjkDN94i2VLoNirV4gdVD9_vpFG_EUcvNBe-m9ofA0uEj-1fsv42-nOFkcpEpueA2XQdh55CDsc-3WQ3VKnvWCEa2TuKoYjPbW7Ul7uxELnVZ-rROGOE6PCdHq3b7944xXgic5uGrP2T2o2xLqLCfUhCZh_64W-e0uHD5DJ18JBsXhcMQY";
+type ValidationSuccessProps = {
+  officer?: { officerFirstName?: string; firstName?: string; brand?: string };
+  scannedResident?: {
+    firstCode?: string;
+    lastCode?: string;
+    date?: Date | string;
+    gasType?: string;
+    serial?: string;
+  } | null;
+  onBack: () => void;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+};
 
-export default function ValidationSuccess({ officer, scannedResident, onBack, activeTab, onTabChange }) {
-  const managerName = officer?.officerFirstName || officer?.firstName || "Manager";
-  const brand = officer?.brand || "Station";
-
-  const nameCode = scannedResident
-    ? `${scannedResident.firstCode}... ${scannedResident.lastCode}...`
-    : "Juan A. Dela Cruz";
-  const registeredAt = scannedResident ? formatDecodedDate(scannedResident.date) : null;
+export default function ValidationSuccess({ scannedResident, onBack, activeTab, onTabChange }: ValidationSuccessProps) {
+  const firstName = scannedResident?.firstCode || "JCX";
+  const lastName = scannedResident?.lastCode || "LEQ";
+  const plateNumber = "ABC-1234";
+  const vehicleType = "Motorcycle";
+  const registeredAt = scannedResident?.date
+    ? formatDecodedDate(new Date(scannedResident.date))
+    : null;
 
   const [fuelConsumed, setFuelConsumed] = useState(12);
   const [fuelLimit] = useState(20);
   const [literInput, setLiterInput] = useState("");
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [hasTopUp, setHasTopUp] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const remainingLiters = Math.max(fuelLimit - fuelConsumed, 0);
+  const fuelTypeLabel = "gasoline";
+  const displayFuelType = "Gasoline";
+  const isDieselType = fuelTypeLabel.includes("diesel");
+  const fuelOptionButtons = isDieselType
+    ? ["Diesel", "Premium Diesel"]
+    : ["Regular/Unleaded (91)", "Premium (95)", "Super Premium (97)"];
+  const [selectedFuelOption, setSelectedFuelOption] = useState("");
+  const fuelTypeTheme = fuelTypeLabel.includes("diesel")
+    ? { bgFrom: "#dcfce7", bgTo: "#bbf7d0", border: "#86efac", text: "#166534" }
+    : fuelTypeLabel.includes("premium")
+      ? { bgFrom: "#ffedd5", bgTo: "#fed7aa", border: "#fdba74", text: "#9a3412" }
+      : { bgFrom: "#fee2e2", bgTo: "#fecaca", border: "#fca5a5", text: "#991b1b" };
+  const circleColor =
+    remainingLiters <= 7
+      ? "#c62828"
+      : "#2e7d32";
+  const allocationBg =
+    remainingLiters <= 7
+      ? "#fdecec"
+      : "#eaf4ea";
+  const allocationBorder =
+    remainingLiters <= 7
+      ? "#f4b9b9"
+      : "#b8e3bf";
+  const textColor = circleColor;
+  const textMutedColor =
+    remainingLiters <= 7
+      ? "#9f1d1d"
+      : "#1f5f27";
 
   const handleAddLiters = () => {
     const liters = parseFloat(literInput);
@@ -28,7 +71,21 @@ export default function ValidationSuccess({ officer, scannedResident, onBack, ac
     }
     setFuelConsumed((prev) => prev + liters);
     setLiterInput("");
+    setHasTopUp(true);
+    setActionError("");
   };
+
+  const handleConfirmDispense = () => {
+    if (!hasTopUp) {
+      setActionError("Please top up liters first before confirming dispense.");
+      return;
+    }
+    onBack();
+  };
+
+  useEffect(() => {
+    setSelectedFuelOption(fuelOptionButtons[0] || "");
+  }, [fuelTypeLabel]);
 
   return (
     <div className="flex flex-col min-h-dvh bg-surface relative">
@@ -62,50 +119,92 @@ export default function ValidationSuccess({ officer, scannedResident, onBack, ac
                   check_circle
                 </span>
               </div>
-              <h2 className="font-headline font-black text-white text-2xl tracking-tight uppercase">Validated</h2>
-              <p className="text-on-primary-container font-medium text-sm mt-1">Transaction Authorized</p>
+              <h2 className="font-headline font-black text-white text-xl tracking-tight uppercase">Validated</h2>
+              <p className="text-on-primary-container font-medium text-xs mt-0.5">Transaction Authorized</p>
             </div>
           </div>
 
-          <div className="p-6 space-y-8">
+          <div className="p-6 space-y-4">
             {/* Resident Identity */}
-            <div className="flex flex-col items-center text-center">
-              <div className="w-32 h-32 rounded-full border-4 border-surface-container-high p-1 bg-white mb-4">
-                <img src={RESIDENT_IMG} alt="Resident" className="w-full h-full rounded-full object-cover" />
+            <div className="bg-surface-container-low rounded-xl p-4 space-y-3">
+              <p className="text-outline text-xs font-bold tracking-widest uppercase text-center">Verified Resident</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-white p-2.5">
+                  <p className="text-outline text-[9px] font-bold uppercase tracking-wider">First Name</p>
+                  <p className="font-headline font-black text-xl text-[#003366] tracking-widest">{firstName}</p>
+                </div>
+                <div className="rounded-lg bg-white p-2.5">
+                  <p className="text-outline text-[9px] font-bold uppercase tracking-wider">Last Name</p>
+                  <p className="font-headline font-black text-xl text-[#003366] tracking-widest">{lastName}</p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-outline text-xs font-bold tracking-widest uppercase">Verified Resident</p>
-                <h3 className="font-headline font-extrabold text-2xl text-primary">{nameCode}</h3>
-                {registeredAt && (
-                  <p className="text-outline text-xs mt-1">Registered: {registeredAt}</p>
-                )}
+              <div className="rounded-lg bg-white p-3 text-center">
+                <p className="text-outline text-[10px] font-bold uppercase tracking-wider">Plate Number</p>
+                <p className="font-headline font-black text-4xl text-[#003366] tracking-widest leading-none mt-1">{plateNumber}</p>
+                <p className="text-outline text-xs font-bold uppercase tracking-wider mt-2">Vehicle Type</p>
+                <p className="font-headline font-bold text-xl text-on-surface">{vehicleType}</p>
               </div>
+              {displayFuelType && (
+                <div
+                  className="mx-auto w-full max-w-[240px] rounded-full border px-4 py-2 flex items-center justify-center gap-2 shadow-sm"
+                  style={{
+                    backgroundImage: `linear-gradient(to right, ${fuelTypeTheme.bgFrom}, ${fuelTypeTheme.bgTo})`,
+                    borderColor: fuelTypeTheme.border,
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ color: fuelTypeTheme.text, fontSize: "18px", fontVariationSettings: "'FILL' 1" }}
+                  >
+                    local_gas_station
+                  </span>
+                  <div className="text-center">
+                    <p className="text-[11px] font-bold uppercase tracking-wider leading-none" style={{ color: fuelTypeTheme.text }}>Fuel Type</p>
+                    <p className="text-lg font-black leading-tight" style={{ color: fuelTypeTheme.text }}>{displayFuelType}</p>
+                  </div>
+                </div>
+              )}
+              {registeredAt && (
+                <p className="text-outline text-[11px] text-center">Registered: {registeredAt}</p>
+              )}
             </div>
-
-            {/* Decoded QR name codes */}
-            {scannedResident && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-1">
-                  <p className="text-outline text-[10px] font-bold uppercase tracking-wider">First Name Code</p>
-                  <p className="font-headline font-black text-2xl text-[#003366] tracking-widest">{scannedResident.firstCode}</p>
-                </div>
-                <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-1">
-                  <p className="text-outline text-[10px] font-bold uppercase tracking-wider">Last Name Code</p>
-                  <p className="font-headline font-black text-2xl text-[#003366] tracking-widest">{scannedResident.lastCode}</p>
-                </div>
-              </div>
-            )}
 
             {/* Transaction Details */}
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-2">
-                  <span className="material-symbols-outlined text-[#003366]">two_wheeler</span>
-                  <div>
-                    <p className="text-outline text-[12px] font-bold uppercase tracking-wider">Vehicle Type</p>
-                    <p className="font-headline font-bold text-xl text-on-surface">Motorcycle</p>
-                    <p className="text-outline text-[12px] font-bold uppercase tracking-wider mt-1">Plate Number</p>
-                    <p className="font-headline font-bold text-xl text-on-surface">ABC-1234</p>
+              <div
+                className="rounded-2xl p-3 sm:p-4 border overflow-hidden"
+                style={{ background: allocationBg, borderColor: allocationBorder }}
+              >
+                <div className="flex items-start justify-between gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider" style={{ color: textMutedColor }}>Fuel Allocation</p>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <span className="material-symbols-outlined text-base sm:text-lg" style={{ color: textColor, fontVariationSettings: "'FILL' 1" }}>
+                        local_gas_station
+                      </span>
+                      <p className="text-3xl sm:text-5xl font-black font-headline leading-none" style={{ color: textColor }}>
+                        {remainingLiters.toFixed(1)}
+                      </p>
+                      <span className="text-xl sm:text-3xl" style={{ color: textColor }}>Liters</span>
+                    </div>
+                    <p className="text-lg sm:text-2xl font-bold mt-1" style={{ color: textColor }}>Remaining</p>
+                  </div>
+                  <div
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[3px] sm:border-4 bg-white flex flex-col items-center justify-center shrink-0"
+                    style={{ borderColor: circleColor }}
+                  >
+                    <span
+                      className="text-xl sm:text-3xl font-black leading-none"
+                      style={{ color: circleColor }}
+                    >
+                      {Math.round((remainingLiters / fuelLimit) * 100)}%
+                    </span>
+                    <span
+                      className="text-[8px] sm:text-[9px] font-bold uppercase"
+                      style={{ color: circleColor }}
+                    >
+                      Left
+                    </span>
                   </div>
                 </div>
 
@@ -120,7 +219,7 @@ export default function ValidationSuccess({ officer, scannedResident, onBack, ac
                     <p className="font-headline font-bold text-xl text-on-surface">{fuelLimit}L</p>
                   </div>
                 </div>
-              </div>
+                <div className="mt-2 flex items-center justify-end text-base sm:text-2xl font-bold" style={{ color: textColor }}>
 
               {/* Fuel Type + QR Serial */}
               {scannedResident && (
@@ -138,10 +237,30 @@ export default function ValidationSuccess({ officer, scannedResident, onBack, ac
                     <p className="font-headline font-bold text-sm text-on-surface font-mono tracking-widest">{scannedResident.serial}</p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Liter Input */}
               <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-3">
+                <label className="text-outline text-[12px] font-bold uppercase tracking-wider">Fuel Type</label>  
+                <div className={`grid gap-2 ${isDieselType ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3"}`}>
+                  {fuelOptionButtons.map((option) => {
+                    const active = selectedFuelOption === option;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setSelectedFuelOption(option)}
+                        className={`rounded-lg border py-2.5 px-2 text-sm sm:text-base font-bold active:scale-95 transition-all ${
+                          active
+                            ? "bg-[#003366] text-white border-[#003366]"
+                            : "bg-white text-[#003366] border-outline-variant/40 hover:bg-slate-50"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
                 <label className="text-outline text-[12px] font-bold uppercase tracking-wider">Input Liter</label>
                 <input
                   type="number"
@@ -152,13 +271,31 @@ export default function ValidationSuccess({ officer, scannedResident, onBack, ac
                   placeholder="Enter liters"
                   className="w-full rounded-lg border border-outline-variant/30 px-4 py-3 text-on-surface bg-white outline-none focus:border-[#003366]"
                 />
+                <div className="grid grid-cols-5 gap-2">
+                  {[2, 5, 10, 15, 20].map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setLiterInput(String(amount))}
+                      className="rounded-lg border border-outline-variant/40 bg-white py-2.5 text-sm font-bold text-[#003366] active:scale-95 transition-all hover:bg-slate-50"
+                    >
+                      {amount} L
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
                   onClick={handleAddLiters}
-                  className="w-full bg-[#705d00] text-white font-headline font-bold py-3 rounded-xl active:scale-95 transition-all"
+                  className="w-full bg-[#003366] text-white font-headline font-bold py-3 rounded-xl active:scale-95 transition-all"
                 >
-                  Add Liters
+                  Top Up
                 </button>
+                {actionError && (
+                  <div className="flex items-center gap-2 bg-error-container text-on-error-container px-3 py-2 rounded-lg text-sm">
+                    <span className="material-symbols-outlined text-base">error</span>
+                    {actionError}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -174,8 +311,8 @@ export default function ValidationSuccess({ officer, scannedResident, onBack, ac
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 pt-2">
               <button
-                onClick={onBack}
-                className="w-full bg-[#003366] text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                onClick={handleConfirmDispense}
+                className="w-full bg-[#2e7d32] text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined">gas_meter</span>
                 Confirm Dispense

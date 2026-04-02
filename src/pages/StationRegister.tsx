@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ChangeEvent, type FormEvent } from "react";
 
 // Official 80 barangays of Cebu City
 const CEBU_BARANGAYS = [
@@ -21,11 +21,39 @@ const CEBU_BARANGAYS = [
 ];
 
 const BRANDS = [
-  "Shell", "Petron", "Caltex", "Sea Oil", "Phoenix",
-  "Uni Oil", "Rephil", "1st AutoGas", "Fueltech",
+  "Default", "Shell", "Petron", "Caltex", "Phoenix",
 ];
 
-function SheetPicker({ value, onChange, options, placeholder, icon }) {
+const BRAND_FUELS = {
+  Default: ["Diesel", "Premium Diesel", "Regular/Unleaded (91)", "Premium (95)", "Super Premium (97)"],
+  Caltex: ["Diesel", "Premium Diesel", "Regular/Unleaded (91)", "Premium (95)", "Super Premium (97)"],
+  Petron: ["Diesel", "Premium Diesel", "Regular/Unleaded (91)", "Premium (95)", "Super Premium (97)"],
+  Phoenix: ["Diesel", "Premium Diesel", "Regular/Unleaded (91)", "Premium (95)", "Super Premium (97)"],
+  Shell: ["Diesel", "Premium Diesel", "Regular/Unleaded (91)", "Premium (95)", "Super Premium (97)"],
+};
+
+type Brand = keyof typeof BRAND_FUELS;
+
+type StationForm = {
+  barangay: string;
+  brand: Brand | "";
+  officerFirstName: string;
+  officerLastName: string;
+  googleEmail: string;
+  password: string;
+  confirmPassword: string;
+  stationCode: string;
+};
+
+type SheetPickerProps = {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder: string;
+  icon: string;
+};
+
+function SheetPicker({ value, onChange, options, placeholder, icon }: SheetPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -35,7 +63,7 @@ function SheetPicker({ value, onChange, options, placeholder, icon }) {
     return options.filter((o) => o.toLowerCase().includes(q));
   }, [search, options]);
 
-  const handleSelect = (o) => {
+  const handleSelect = (o: string) => {
     onChange(o);
     setOpen(false);
     setSearch("");
@@ -160,40 +188,105 @@ function SheetPicker({ value, onChange, options, placeholder, icon }) {
   );
 }
 
-export default function StationRegister({ onBack, onSuccess }) {
-  const [form, setForm] = useState({
+type StationRegisterProps = {
+  onBack: () => void;
+  onSuccess: (payload: {
+    barangay: string;
+    brand: string;
+    officerFirstName: string;
+    officerLastName: string;
+    googleEmail: string;
+    password: string;
+    availableFuels: string[];
+    fuelCapacities: Record<string, number>;
+    stationCode: string;
+    role: string;
+    registeredAt: string;
+  }) => void;
+};
+
+export default function StationRegister({ onBack, onSuccess }: StationRegisterProps) {
+  const [step, setStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [form, setForm] = useState<StationForm>({
     barangay: "",
     brand: "",
     officerFirstName: "",
+    officerLastName: "",
     googleEmail: "",
-    capacity: "",
+    password: "",
+    confirmPassword: "",
     stationCode: "",
   });
+  const [fuelCapacities, setFuelCapacities] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+  const selectedFuels = form.brand ? BRAND_FUELS[form.brand] : [];
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setError("");
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    const { barangay, brand, officerFirstName, googleEmail, capacity, stationCode } = form;
-
+  const validateStepOne = () => {
+    const {
+      officerFirstName,
+      officerLastName,
+      googleEmail,
+      password,
+      confirmPassword,
+    } = form;
     if (
-      !barangay ||
-      !brand ||
       !officerFirstName.trim() ||
+      !officerLastName.trim() ||
       !googleEmail.trim() ||
-      !capacity.toString().trim() ||
-      !stationCode.trim()
+      !password.trim() ||
+      !confirmPassword.trim()
     ) {
-      setError("All fields are required.");
-      return;
+      setError("Please complete all details first.");
+      return false;
     }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setError("Password and confirm password do not match.");
+      return false;
+    }
+    return true;
+  };
 
+  const validateStepTwo = () => {
+    if (!form.stationCode.trim()) {
+      setError("Please enter station number.");
+      return false;
+    }
+    if (!form.brand) {
+      setError("Please select a brand.");
+      return false;
+    }
+    const hasInvalidFuelCapacity = selectedFuels.some((fuel) => {
+      const value = fuelCapacities[fuel];
+      return !value || Number(value) <= 0;
+    });
+    if (hasInvalidFuelCapacity) {
+      setError("Please enter capacity for all selected fuel types.");
+      return false;
+    }
+    return true;
+  };
+
+  const goToStepTwo = () => {
+    if (!validateStepOne()) return;
+    setError("");
+    setStep(2);
+  };
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!validateStepTwo()) return;
     setShowConfirm(true);
   };
 
@@ -204,8 +297,13 @@ export default function StationRegister({ onBack, onSuccess }) {
       barangay,
       brand,
       officerFirstName: officerFirstName.trim(),
+      officerLastName: officerLastName.trim(),
       googleEmail: googleEmail.trim(),
-      capacity,
+      password,
+      availableFuels: selectedFuels,
+      fuelCapacities: Object.fromEntries(
+        selectedFuels.map((fuel) => [fuel, Number(fuelCapacities[fuel] || 0)])
+      ),
       stationCode: stationCode.trim().toUpperCase(),
       role: "station",
       registeredAt: new Date().toISOString(),
@@ -226,8 +324,8 @@ export default function StationRegister({ onBack, onSuccess }) {
             <div className="bg-gray-50 rounded-xl p-4 space-y-1.5 text-sm mb-5">
               <div className="flex justify-between"><span className="text-gray-500">Barangay</span><span className="font-medium text-gray-800">{form.barangay}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Brand</span><span className="font-medium text-gray-800">{form.brand}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Manager</span><span className="font-medium text-gray-800">{form.officerFirstName}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Capacity</span><span className="font-medium text-gray-800">{form.capacity} L</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Representative</span><span className="font-medium text-gray-800">{`${form.officerFirstName} ${form.officerLastName}`.trim()}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Fuel Types</span><span className="font-medium text-gray-800">{selectedFuels.length}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Station No.</span><span className="font-medium text-gray-800 uppercase">{form.stationCode}</span></div>
             </div>
             <div className="flex gap-3">
@@ -276,94 +374,219 @@ export default function StationRegister({ onBack, onSuccess }) {
           </p>
         </div>
 
+        <div className="mb-5 relative grid grid-cols-2 gap-2 rounded-xl bg-surface-container-low p-1 overflow-hidden">
+          <div
+            className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-lg bg-[#003366] shadow-sm transition-transform duration-300 ease-out ${
+              step === 1 ? "translate-x-0" : "translate-x-[calc(100%+0.5rem)]"
+            }`}
+          />
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className={`relative z-10 rounded-lg py-2 text-xs font-bold transition-colors duration-300 ${
+              step === 1 ? "text-white" : "text-slate-500"
+            }`}
+          >
+            1. Details
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (step === 2 || validateStepOne()) {
+                setError("");
+                setStep(2);
+              }
+            }}
+            className={`relative z-10 rounded-lg py-2 text-xs font-bold transition-colors duration-300 ${
+              step === 2 ? "text-white" : "text-slate-500"
+            }`}
+          >
+            2. Station Information
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Barangay
-            </label>
-            <SheetPicker
-              value={form.barangay}
-              onChange={(b) => {
-                setForm((prev) => ({ ...prev, barangay: b }));
-                setError("");
-              }}
-              options={CEBU_BARANGAYS}
-              placeholder="Select station barangay…"
-              icon="location_on"
-            />
-          </div>
+          {step === 1 && (
+            <>
+            
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Brand
-            </label>
-            <SheetPicker
-              value={form.brand}
-              onChange={(b) => {
-                setForm((prev) => ({ ...prev, brand: b }));
-                setError("");
-              }}
-              options={BRANDS}
-              placeholder="Select brand…"
-              icon="local_gas_station"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Representative Name
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    name="officerFirstName"
+                    value={form.officerFirstName}
+                    onChange={handleChange}
+                    placeholder="First name"
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
+                  />
+                  <input
+                    type="text"
+                    name="officerLastName"
+                    value={form.officerLastName}
+                    onChange={handleChange}
+                    placeholder="Last name"
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Manager Name
-            </label>
-            <input
-              type="text"
-              name="officerFirstName"
-              value={form.officerFirstName}
-              onChange={handleChange}
-              placeholder="e.g. Juan"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="googleEmail"
+                  value={form.googleEmail}
+                  onChange={handleChange}
+                  placeholder="e.g. juan@gmail.com"
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
+                />
+              </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Google Email
-            </label>
-            <input
-              type="email"
-              name="googleEmail"
-              value={form.googleEmail}
-              onChange={handleChange}
-              placeholder="e.g. juan@gmail.com"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Minimum 6 characters"
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-4 pr-12 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                  >
+                    <span className="material-symbols-outlined text-xl">
+                      {showPassword ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Station Capacity
-            </label>
-            <input
-              type="number"
-              name="capacity"
-              value={form.capacity}
-              onChange={handleChange}
-              placeholder="e.g. 150,000 (liters)"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Re-enter password"
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-4 pr-12 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                  >
+                    <span className="material-symbols-outlined text-xl">
+                      {showConfirmPassword ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              Station Number
-            </label>
-            <input
-              type="text"
-              name="stationCode"
-              value={form.stationCode}
-              onChange={handleChange}
-              placeholder="e.g. STF-001"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm uppercase"
-            />
-          </div>
+              
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+            <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Station Number
+                </label>
+                <input
+                  type="text"
+                  name="stationCode"
+                  value={form.stationCode}
+                  onChange={handleChange}
+                  placeholder="e.g. STF-001"
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm uppercase"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Barangay
+                </label>
+                <SheetPicker
+                  value={form.barangay}
+                  onChange={(b) => {
+                    setForm((prev) => ({ ...prev, barangay: b as StationForm["barangay"] }));
+                    setError("");
+                  }}
+                  options={CEBU_BARANGAYS}
+                  placeholder="Select station barangay…"
+                  icon="location_on"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Brand
+                </label>
+                <SheetPicker
+                  value={form.brand}
+                  onChange={(b) => {
+                    setForm((prev) => ({ ...prev, brand: b as Brand }));
+                    const fuels = BRAND_FUELS[b as Brand] || [];
+                    setFuelCapacities(
+                      Object.fromEntries(fuels.map((fuel) => [fuel, ""]))
+                    );
+                    setError("");
+                  }}
+                  options={BRANDS}
+                  placeholder="Select brand…"
+                  icon="local_gas_station"
+                />
+              </div>
+
+              {selectedFuels.length > 0 && (
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                    Fuel Capacity Per Type (Liters)
+                  </label>
+                  {selectedFuels.map((fuel) => (
+                    <div
+                      key={fuel}
+                      className="flex items-center justify-between gap-3 rounded-xl bg-surface-container-lowest border border-outline-variant px-3 py-2.5"
+                    >
+                      <p className="text-xs font-semibold text-on-surface-variant leading-tight">{fuel}</p>
+                      <div className="relative w-28 shrink-0">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={fuelCapacities[fuel] || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setFuelCapacities((prev) => ({ ...prev, [fuel]: value }));
+                            setError("");
+                          }}
+                          placeholder="0"
+                          className="w-full bg-white border border-outline-variant rounded-lg py-2 pl-3 pr-7 text-sm text-right"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-outline">
+                          L
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 bg-error-container text-on-error-container px-4 py-3 rounded-xl text-sm">
@@ -372,12 +595,34 @@ export default function StationRegister({ onBack, onSuccess }) {
             </div>
           )}
 
-          <button
-            type="submit"
-            className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
-          >
-            Create Station Account
-          </button>
+          {step === 1 ? (
+            <button
+              type="button"
+              onClick={goToStepTwo}
+              className="w-full bg-primary-container text-white font-headline font-bold py-4  rounded-xl shadow-lg active:scale-95 transition-all"
+            >
+              Next
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setStep(1);
+                }}
+                className="w-full border border-outline-variant text-on-surface font-headline font-bold py-4 rounded-xl active:scale-95 transition-all"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all"
+              >
+                Create Account
+              </button>
+            </div>
+          )}
         </form>
       </main>
     </div>

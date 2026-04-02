@@ -9,6 +9,7 @@ interface LoginProps {
 
 export default function Login({ onBack, onSuccess }: LoginProps) {
   const [form, setForm] = useState<{ email: string; password: string }>({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [forgotView, setForgotView] = useState<boolean>(false);

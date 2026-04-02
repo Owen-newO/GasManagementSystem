@@ -32,6 +32,10 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
     }
     setDecoded(result);
     setError("");
+    if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    redirectTimerRef.current = setTimeout(() => {
+      onSuccess(result);
+    }, 700);
     return true;
   };
 
@@ -112,6 +116,12 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
     return () => stopCamera();
   }, [stopCamera]);
 
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    };
+  }, []);
+
   const handleClose = () => {
     stopCamera();
     onClose();
@@ -154,16 +164,6 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
     };
     img.src = url;
     e.target.value = "";
-  };
-
-  const handleConfirm = () => {
-    if (decoded) onSuccess(decoded);
-  };
-
-  const handleScanAnother = () => {
-    setDecoded(null);
-    setError("");
-    if (mode === "camera") startCamera();
   };
 
   return (

@@ -17,6 +17,7 @@ const recentTransactions = [
   { id: 11, name: "Rommel Aquino",        plate: "HIJ-5566", time: "05:50 AM", liters: 14.5, type: "Diesel" },
   { id: 12, name: "Teresita Magbanua",    plate: "KLM-8877", time: "05:35 AM", liters: 11.0, type: "Premium" },
 ];
+const MAX_DASHBOARD_TRANSACTIONS = 5;
 
 interface OfficerData {
   officerFirstName?: string;
@@ -37,9 +38,19 @@ export default function Dashboard({ officer, onScan, activeTab, onTabChange }: {
   const stationCode = officer?.stationCode || "N/A";
   const barangay = officer?.barangay || "Not set";
   const brand = officer?.brand || "Station";
-  const capacity = officer?.capacity || "N/A";
-
-  const todayTotal = recentTransactions.reduce((s, t) => s + t.liters, 0);
+  const capacity = totalCapacityLabel(officer);
+  const fuelCapacities = officer?.fuelCapacities || {};
+  const fuelPrices = officer?.fuelPrices || {};
+  const fuelInventory = officer?.fuelInventory || {};
+  const fuelInventoryCards: Array<[string, number]> = Object.keys(fuelCapacities).length
+    ? Object.entries(fuelCapacities)
+    : [
+        ["Diesel", 0],
+        ["Premium Diesel", 0],
+        ["Regular/Unleaded (91)", 0],
+        ["Premium (95)", 0],
+        ["Super Premium (97)", 0],
+      ];
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">
@@ -70,14 +81,26 @@ export default function Dashboard({ officer, onScan, activeTab, onTabChange }: {
                 <span className="material-symbols-outlined text-yellow-400 icon-filled icon-lg">local_gas_station</span>
                 {brand}
               </p>
-              <p className="text-white/50 text-xs mt-1">Barangay {barangay} · ID: {stationCode}</p>
+              <p className="text-indigo-200/80 text-xs mt-1">Barangay {barangay} · ID: {stationCode}</p>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <span className="bg-green-400 text-green-900 px-3 py-1 rounded-full text-[11px] font-black uppercase">
-                Online
-              </span>
-              <span className="text-white/40 text-[10px]">Cap: {capacity} L</span>
+            
+            <div className="flex flex-col items-stretch sm:items-end gap-3 w-full sm:w-auto relative z-10 mt-2 sm:mt-0">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/5 self-start sm:self-end">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-200">Total Capacity</p>
+                <p className="text-lg font-black text-white leading-none mt-0.5">{capacity} <span className="text-xs text-indigo-200">L</span></p>
+              </div>
+              <button
+                type="button"
+                onClick={onEditFuels}
+                className="w-full sm:w-auto min-h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-md text-white text-xs font-black uppercase tracking-wider px-5 py-2.5 active:scale-[0.98] transition-all duration-300 ease-out flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-base shrink-0" style={{ fontSize: "16px", fontVariationSettings: "'FILL' 0" }}>edit</span>
+                Fuel &amp; pricing
+              </button>
             </div>
+            
+            {/* Decorative background circle */}
+            <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
           </section>
 
           {/* Stats — dark charcoal */}
@@ -115,12 +138,21 @@ export default function Dashboard({ officer, onScan, activeTab, onTabChange }: {
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#003366]">
                       <span className="material-symbols-outlined text-white icon-filled icon-base">person</span>
                     </div>
-                    <div>
-                      <p className="text-sm font-black text-slate-800">{tx.name}</p>
-                      <p className="text-[10px] font-medium text-slate-400">{tx.plate} · {tx.time}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-slate-800 truncate">{tx.name}</p>
+                      <p className="text-[10px] font-medium text-slate-400">
+                        {tx.plate} · {tx.date} · {tx.time}
+                      </p>
+                      <span
+                        className="inline-block mt-1 text-[8px] font-black px-2 py-0.5 rounded-full max-w-full truncate"
+                        style={{ background: txTheme.soft, color: txTheme.text }}
+                        title={tx.fuelType}
+                      >
+                        {tx.fuelType}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0 max-w-[48%]">
                     <p className="text-base font-black text-[#003366]">{tx.liters.toFixed(1)} L</p>
                     <span
                       className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${fuelBadgeClass(tx.type)}`}
@@ -129,7 +161,8 @@ export default function Dashboard({ officer, onScan, activeTab, onTabChange }: {
                     </span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         </div>

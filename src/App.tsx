@@ -7,6 +7,7 @@ import Register from "./pages/Register";
 import StationRegister from "./pages/StationRegister";
 import QRDisplay from "./pages/QRDisplay";
 import Dashboard from "./pages/Dashboard";
+import StationFuelSetup from "./pages/StationFuelSetup";
 import UserDashboard from "./pages/UserDashboard";
 import QRScanner from "./pages/QRScanner";
 import ValidationSuccess from "./pages/ValidationSuccess";
@@ -295,12 +296,43 @@ export default function App() {
     );
   }
 
+  if (screen === "fuel-setup") {
+    return (
+      <RoleGuard requiredRole="station" onDeny={() => setScreen("landing")}>
+        <StationFuelSetup
+          officer={officer}
+          onBack={() => {
+            setScreen("dashboard");
+            setActiveTab("dashboard");
+          }}
+          onSave={(payload) => {
+            const total = Object.values(payload.fuelCapacities).reduce((a, b) => a + b, 0);
+            setOfficer((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    fuelCapacities: payload.fuelCapacities,
+                    fuelPrices: payload.fuelPrices,
+                    availableFuels: Object.keys(payload.fuelCapacities),
+                    capacity: total,
+                  }
+                : prev
+            );
+            setScreen("dashboard");
+            setActiveTab("dashboard");
+          }}
+        />
+      </RoleGuard>
+    );
+  }
+
   // Default: station dashboard
   return (
     <RoleGuard requiredRole="station" onDeny={() => setScreen("landing")}>
       <Dashboard
         officer={officer}
         onScan={handleScan}
+        onEditFuels={() => setScreen("fuel-setup")}
         activeTab={activeTab}
         onTabChange={handleOfficerTabChange}
       />
