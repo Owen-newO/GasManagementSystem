@@ -9,6 +9,7 @@ interface LoginProps {
 
 export default function Login({ onBack, onSuccess }: LoginProps) {
   const [form, setForm] = useState<{ email: string; password: string }>({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [forgotView, setForgotView] = useState<boolean>(false);
@@ -111,14 +112,25 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
                 <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
                   Password
                 </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-4 pr-12 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                  >
+                    <span className="material-symbols-outlined text-xl">
+                      {showPassword ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
                 <div className="flex justify-end">
                   <button
                     type="button"
