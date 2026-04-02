@@ -15,7 +15,7 @@ function getRegisterResidentUrl(): string {
   if (import.meta.env.DEV && useEmu && projectId) {
     return `http://127.0.0.1:5001/${projectId}/asia-southeast1/registerResident`;
   }
-  return "https://asia-southeast1-agas-fuel-rationing-system.cloudfunctions.net/registerResident";
+  return "/api/registerResident";
 }
 
 async function registerResidentHttp(payload: Record<string, unknown>): Promise<{ uid?: string }> {
