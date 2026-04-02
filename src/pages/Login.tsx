@@ -13,6 +13,7 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [forgotView, setForgotView] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState<string>("");
   const [resetSent, setResetSent] = useState<boolean>(false);
 
@@ -56,19 +57,19 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">
-      <div className="flex items-center gap-3 px-6 py-4 bg-slate-100/80 backdrop-blur-md shadow-sm sticky top-0 z-40">
+      <div className="flex items-center px-6 py-4 bg-slate-100/80 backdrop-blur-md shadow-sm sticky top-0 z-40 relative">
         <button
           onClick={forgotView ? handleBackToLogin : onBack}
-          className="p-2 hover:bg-slate-200/50 rounded-full transition-all active:scale-95 text-[#003366]"
+          className="p-2 hover:bg-slate-200/50 rounded-full transition-all active:scale-95 text-[#003366] absolute left-6"
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <div>
-          <h1 className="text-[#003366] font-headline font-bold text-lg leading-none">
-            {forgotView ? "Reset Password" : "Officer Login"}
+        <div className="flex flex-col items-center w-full">
+          <h1 className="text-[#003366] font-headline font-bold text-2xl leading-none">
+            {forgotView ? "Reset Password" : "Login"}
           </h1>
-          <p className="text-[10px] text-[#003366] font-black uppercase tracking-wider opacity-70">
-            Fuel Rationing System
+          <p className="text-[13px] text-[#003366] font-black uppercase tracking-wider opacity-70">
+            AGAS
           </p>
         </div>
       </div>
@@ -78,10 +79,7 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
           <>
             <div className="flex flex-col items-center mb-8">
               <div className="w-20 h-20 rounded-2xl bg-primary-container flex items-center justify-center mb-4 shadow-lg">
-                <span
-                  className="material-symbols-outlined text-white"
-                  style={{ fontSize: "40px", fontVariationSettings: "'FILL' 1" }}
-                >
+                <span className="material-symbols-outlined text-white icon-filled text-[40px]">
                   manage_accounts
                 </span>
               </div>
@@ -119,14 +117,14 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
                     value={form.password}
                     onChange={handleChange}
                     placeholder="Enter your password"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-4 pr-12 text-sm"
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 pr-12 text-sm"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
                   >
-                    <span className="material-symbols-outlined text-xl">
+                    <span className="material-symbols-outlined text-[20px]">
                       {showPassword ? "visibility_off" : "visibility"}
                     </span>
                   </button>
@@ -162,10 +160,7 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
           <>
             <div className="flex flex-col items-center mb-8">
               <div className="w-20 h-20 rounded-2xl bg-primary-container flex items-center justify-center mb-4 shadow-lg">
-                <span
-                  className="material-symbols-outlined text-white"
-                  style={{ fontSize: "40px", fontVariationSettings: "'FILL' 1" }}
-                >
+                <span className="material-symbols-outlined text-white icon-filled text-[40px]">
                   lock_reset
                 </span>
               </div>
@@ -180,10 +175,7 @@ export default function Login({ onBack, onSuccess }: LoginProps) {
             {resetSent ? (
               <div className="space-y-4">
                 <div className="flex flex-col items-center gap-3 bg-surface-container px-6 py-8 rounded-2xl text-center">
-                  <span
-                    className="material-symbols-outlined text-primary"
-                    style={{ fontSize: "48px", fontVariationSettings: "'FILL' 1" }}
-                  >
+                  <span className="material-symbols-outlined text-primary icon-filled text-[48px]">
                     mark_email_read
                   </span>
                   <p className="font-semibold text-on-surface">Check your inbox</p>

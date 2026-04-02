@@ -22,45 +22,27 @@ const FILTERS = [
   { label: "Caltex" },
   { label: "Phoenix" },
   { label: "Seaoil" },
+  { label: "Flying V" },
+  { label: "Diatoms" },
+  { label: "Other" },
+];
+
+const STANDARD_FUELS = [
+  { name: "Diesel", type: "Diesel", price: 0 },
+  { name: "Regular/Unleaded Gasoline", type: "Gasoline", price: 0 },
+  { name: "Premium", type: "Premium", price: 0 },
 ];
 
 const BRAND_FUELS = {
-  Shell: [
-    { name: "Shell FuelSave Diesel", type: "Diesel" },
-    { name: "Shell FuelSave Gasoline", type: "Gasoline" },
-    { name: "Shell V-Power Diesel", type: "Diesel" },
-    { name: "Shell V-Power Gasoline", type: "Gasoline" },
-    { name: "Shell V-Power Racing", type: "Premium" },
-  ],
-  Petron: [
-    { name: "Petron Blaze 100", type: "Premium" },
-    { name: "Petron XCS", type: "Gasoline" },
-    { name: "Petron Xtra Advance", type: "Gasoline" },
-    { name: "Petron Diesel Max", type: "Diesel" },
-    { name: "Petron Turbo Diesel", type: "Diesel" },
-  ],
-  Caltex: [
-    { name: "Caltex Platinum with Techron", type: "Premium" },
-    { name: "Caltex Gold with Techron", type: "Gasoline" },
-    { name: "Caltex Regular", type: "Gasoline" },
-    { name: "Caltex Power Diesel", type: "Diesel" },
-    { name: "Caltex Silver Diesel", type: "Diesel" },
-  ],
-  Phoenix: [
-    { name: "Phoenix Premium", type: "Premium" },
-    { name: "Phoenix Regular", type: "Gasoline" },
-    { name: "Phoenix Diesel", type: "Diesel" },
-  ],
-  Seaoil: [
-    { name: "Seaoil FuelPlus Premium", type: "Premium" },
-    { name: "Seaoil FuelPlus Gasoline", type: "Gasoline" },
-    { name: "Seaoil FuelPlus Diesel", type: "Diesel" },
-  ],
-  default: [
-    { name: "Regular Unleaded", type: "Gasoline" },
-    { name: "Premium Unleaded", type: "Premium" },
-    { name: "Diesel", type: "Diesel" },
-  ],
+  Shell: STANDARD_FUELS,
+  Petron: STANDARD_FUELS,
+  Caltex: STANDARD_FUELS,
+  Phoenix: STANDARD_FUELS,
+  Seaoil: STANDARD_FUELS,
+  "Flying V": STANDARD_FUELS,
+  Diatoms: STANDARD_FUELS,
+  Other: STANDARD_FUELS,
+  default: STANDARD_FUELS,
 };
 
 const FUEL_TYPE_COLORS = {
@@ -68,6 +50,71 @@ const FUEL_TYPE_COLORS = {
   Gasoline: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500" },
   Premium: { bg: "bg-purple-50", text: "text-purple-700", dot: "bg-purple-500" },
 };
+
+const STATIC_STATIONS = [
+  // ── Shell ──
+  { id: 1,  name: "Shell Robinsons Mobility – Galleria", brand: "Shell",    address: "Sergio Osmena Blvd cor 13th Ave, Cebu City",            rating: 4.5, hours: "8AM–11PM",       lat: 10.3083, lon: 123.8940 },
+  { id: 2,  name: "Shell – Osmena Blvd / Jones Ave",     brand: "Shell",    address: "Cor. Uytengsu St, Cebu City",                           rating: 4.2, hours: "Open 24 hours",  lat: 10.2978, lon: 123.8969 },
+  { id: 3,  name: "Shell – N. Escario St",               brand: "Shell",    address: "N. Escario St, Cebu City",                              rating: 4.1, hours: "Open 24 hours",  lat: 10.3258, lon: 123.9003 },
+  { id: 4,  name: "Shell – Gorordo Ave",                 brand: "Shell",    address: "839 Gorordo Ave, Lahug, Cebu City",                     rating: 3.4, hours: "Open 24 hours",  lat: 10.3336, lon: 123.9014 },
+  { id: 5,  name: "Shell – F. Cabahug St",               brand: "Shell",    address: "F. Cabahug St, Kasambagan, Cebu City",                  rating: 4.3, hours: "Open 24 hours",  lat: 10.3394, lon: 123.9033 },
+  { id: 6,  name: "Shell – Banilad",                     brand: "Shell",    address: "8888 Gov. M. Cuenco Ave, Banilad, Cebu City",           rating: 3.4, hours: "Open 24 hours",  lat: 10.3522, lon: 123.9033 },
+  { id: 7,  name: "Shell Talamban Highlands",            brand: "Shell",    address: "Gov. M. Cuenco Ave, Talamban, Cebu City",               rating: 3.7, hours: "Open 24 hours",  lat: 10.3678, lon: 123.9122 },
+  { id: 8,  name: "Shell – Katipunan St",                brand: "Shell",    address: "240 Katipunan St, Labangon, Cebu City",                 rating: 4.3, hours: "Open 24 hours",  lat: 10.2939, lon: 123.8764 },
+  { id: 9,  name: "Shell – Basak Pardo",                 brand: "Shell",    address: "Natalio B. Bacalso Ave, Basak Pardo, Cebu City",        rating: 4.3, hours: "Open 24 hours",  lat: 10.2839, lon: 123.8717 },
+  { id: 10, name: "Shell – Mambaling",                   brand: "Shell",    address: "F. Vestil St, Mambaling, Cebu City",                    rating: 4.2, hours: "Open 24 hours",  lat: 10.2847, lon: 123.8836 },
+  { id: 11, name: "Shell NRA",                           brand: "Shell",    address: "Mandaue Causeway, North Reclamation Area, Cebu City",   rating: 4.1, hours: "Open 24 hours",  lat: 10.3092, lon: 123.9003 },
+  { id: 12, name: "Shell – MJ Cuenco Ave",               brand: "Shell",    address: "1296 MJ Cuenco Ave, Carreta, Cebu City",                rating: 3.3, hours: "Open 24 hours",  lat: 10.3186, lon: 123.8789 },
+  { id: 13, name: "Shell – Talamban Rd (Upper)",         brand: "Shell",    address: "Talamban Rd, Talamban, Cebu City",                      rating: 4.6, hours: "Open 24 hours",  lat: 10.3742, lon: 123.9158 },
+  // ── Petron ──
+  { id: 14, name: "Petron – Pope John Paul II Ave",      brand: "Petron",   address: "Pope John Paul II Ave, Apas, Cebu City",                rating: 3.7, hours: "Open 24 hours",  lat: 10.3411, lon: 123.9083 },
+  { id: 15, name: "Petron – N. Escario St (Guadalupe)",  brand: "Petron",   address: "58 N. Escario St, Guadalupe, Cebu City",                rating: 4.2, hours: "Open 24 hours",  lat: 10.3281, lon: 123.9019 },
+  { id: 16, name: "Petron – F. Cabahug St",              brand: "Petron",   address: "49 F. Cabahug St, Kasambagan, Cebu City",               rating: 4.0, hours: "Open 24 hours",  lat: 10.3381, lon: 123.9017 },
+  { id: 17, name: "Petron – R. Duterte St",              brand: "Petron",   address: "R. Duterte St, Banawa, Cebu City",                      rating: 3.9, hours: "Open 24 hours",  lat: 10.3253, lon: 123.8886 },
+  { id: 18, name: "Petron – V Rama Ave",                 brand: "Petron",   address: "975 V Rama Ave, Luz/Mabini, Cebu City",                 rating: 4.3, hours: "6AM–10PM",        lat: 10.3003, lon: 123.8883 },
+  { id: 19, name: "Petron – B. Rodriguez St",            brand: "Petron",   address: "52-58 B. Rodriguez St, Cebu City",                      rating: 3.6, hours: "Open 24 hours",  lat: 10.3192, lon: 123.8972 },
+  { id: 20, name: "Petron – South Cebu City",            brand: "Petron",   address: "Kinasang-an/Pardo area, Cebu City",                     rating: 4.4, hours: "Open 24 hours",  lat: 10.2756, lon: 123.8733 },
+  { id: 21, name: "Petron – Near Fuente (Central)",      brand: "Petron",   address: "Central/Cogon Ramos area, Cebu City",                   rating: 4.5, hours: "Open 24 hours",  lat: 10.3131, lon: 123.8953 },
+  { id: 22, name: "Petron – Punta Princesa",             brand: "Petron",   address: "Francisco Llamas St, Punta Princesa, Cebu City",        rating: null, hours: "Open 24 hours", lat: 10.2917, lon: 123.8800 },
+  { id: 23, name: "Petron – Tisa",                       brand: "Petron",   address: "Katipunan St, Tisa, Cebu City",                         rating: 4.2, hours: "Open 24 hours",  lat: 10.2961, lon: 123.8769 },
+  // ── Caltex ──
+  { id: 24, name: "Caltex – Landers Cebu",               brand: "Caltex",   address: "115 Pope John Paul II Ave, Cebu City",                  rating: 4.2, hours: "8AM–9PM",         lat: 10.3356, lon: 123.9086 },
+  { id: 25, name: "Caltex – T. Padilla / MJ Cuenco Ave", brand: "Caltex",   address: "T. Padilla cor MJ Cuenco Ave, Cebu City",               rating: 4.4, hours: "Open 24 hours",  lat: 10.3044, lon: 123.8811 },
+  { id: 26, name: "Caltex – Magallanes St",              brand: "Caltex",   address: "Magallanes cor Climaco St, Cebu City",                  rating: 4.3, hours: "7AM–10:30PM",     lat: 10.2942, lon: 123.9006 },
+  { id: 27, name: "Caltex – Cebu South Rd",              brand: "Caltex",   address: "1074 Cebu South Rd, Basak, Cebu City",                  rating: 4.0, hours: "Open 24 hours",  lat: 10.2786, lon: 123.8747 },
+  { id: 28, name: "Caltex – Filimon Sotto Dr",           brand: "Caltex",   address: "Filimon Sotto Dr, Cogon Ramos, Cebu City",              rating: 3.8, hours: "Open 24 hours",  lat: 10.3147, lon: 123.8939 },
+  { id: 29, name: "Caltex – Tres de Abril St",           brand: "Caltex",   address: "567 Tres de Abril St, Punta Princesa, Cebu City",       rating: null, hours: "Open 24 hours", lat: 10.2881, lon: 123.8783 },
+  // ── Phoenix ──
+  { id: 30, name: "Phoenix Petroleum – Banilad",         brand: "Phoenix",  address: "Gov. Cuenco Ave cor Paradise Village Rd, Banilad",      rating: 3.9, hours: "Open 24 hours",  lat: 10.3517, lon: 123.9025 },
+  { id: 31, name: "Phoenix Gas Station – Mambaling",     brand: "Phoenix",  address: "Main Rd, Mambaling, Cebu City",                         rating: 3.9, hours: "Open 24 hours",  lat: 10.2839, lon: 123.8844 },
+  // ── Seaoil ──
+  { id: 32, name: "SEAOIL – Tres de Abril St",           brand: "Seaoil",   address: "Tres de Abril St, Punta Princesa, Cebu City",           rating: 4.4, hours: "6AM–10PM",        lat: 10.2875, lon: 123.8778 },
+  { id: 33, name: "SeaOil – Bacalso Ave",                brand: "Seaoil",   address: "Natalio B. Bacalso Ave, Duljo-Fatima, Cebu City",       rating: 3.6, hours: "8AM–10PM",        lat: 10.2906, lon: 123.8733 },
+  // ── Flying V ──
+  { id: 34, name: "Flying V – Pit-os",                   brand: "Flying V", address: "Brgy. Pit-os, Cebu City",                               rating: 4.0, hours: "Open 24 hours",  lat: 10.3956, lon: 123.9103 },
+  { id: 35, name: "Flying V – Tugas",                    brand: "Flying V", address: "F. Jaca St, Quiot Pardo, Cebu City",                    rating: 4.5, hours: "Open 24 hours",  lat: 10.2700, lon: 123.8733 },
+  // ── Diatoms ──
+  { id: 36, name: "Diatoms Fuel – Tisa",                 brand: "Diatoms",  address: "654 Katipunan St, Tisa, Cebu City",                     rating: 4.6, hours: "6:30AM–11PM",     lat: 10.2972, lon: 123.8778 },
+  { id: 37, name: "Diatoms Fuel – P. Del Rosario St",    brand: "Diatoms",  address: "Pantaleon del Rosario St, Pahina Central, Cebu City",   rating: 4.6, hours: "6AM–11PM",        lat: 10.2983, lon: 123.9022 },
+  // ── Other ──
+  { id: 38, name: "Fueltech Philippines",                brand: "Other",    address: "120 Juan Luna Ave Ext, Tinago, Cebu City",              rating: 3.6, hours: "Open 24 hours",  lat: 10.2972, lon: 123.9006 },
+  { id: 39, name: "Unioil – Lahug",                      brand: "Other",    address: "Gorordo Ave, Lahug, Cebu City",                         rating: 5.0, hours: "Open 24 hours",  lat: 10.3306, lon: 123.9022 },
+  { id: 40, name: "Total – Basak Pardo",                 brand: "Other",    address: "Cor. Macopa St, To-ong Pardo, Cebu City",               rating: 4.0, hours: "Open 24 hours",  lat: 10.2811, lon: 123.8697 },
+  { id: 41, name: "Rephil – Pardo",                      brand: "Other",    address: "Natalio B. Bacalso Ave, Pardo, Cebu City",              rating: 4.0, hours: "Open 24 hours",  lat: 10.2769, lon: 123.8733 },
+  { id: 42, name: "Triune Gasoline Station",             brand: "Other",    address: "Sudlon, Cebu City",                                     rating: 3.9, hours: "Open 24 hours",  lat: 10.3603, lon: 123.8900 },
+  { id: 43, name: "C3 Fuels – Labangon",                 brand: "Other",    address: "Salvador St, Labangon, Cebu City",                      rating: 3.3, hours: "Open 24 hours",  lat: 10.2942, lon: 123.8753 },
+  { id: 44, name: "Geminie Gas Station",                 brand: "Other",    address: "Talamban Rd, Talamban, Cebu City",                      rating: 4.2, hours: "Open 24 hours",  lat: 10.3733, lon: 123.9117 },
+  { id: 45, name: "Gas Up – Cebu South Rd",              brand: "Other",    address: "Cebu South Rd, Quiot Pardo, Cebu City",                 rating: 4.3, hours: "Open 24 hours",  lat: 10.2672, lon: 123.8711 },
+  { id: 46, name: "JSY Gasoline Station",                brand: "Other",    address: "397 Candido Padilla St, Kalunasan, Cebu City",          rating: 3.4, hours: "6AM–9PM",         lat: 10.2992, lon: 123.8803 },
+  { id: 47, name: "SGD Gas Station",                     brand: "Other",    address: "Sirao/Busay area, Cebu City",                           rating: 4.3, hours: "Open 24 hours",  lat: 10.3878, lon: 123.8922 },
+  { id: 48, name: "2010 Gas Station",                    brand: "Other",    address: "Cebu Veterans Dr, Busay, Cebu City",                    rating: 4.2, hours: "Open 24 hours",  lat: 10.3853, lon: 123.8892 },
+  { id: 49, name: "LKB Gas Station",                     brand: "Other",    address: "Sitio Tugop, Sudlon/TCH area, Cebu City",               rating: 4.2, hours: "Open 24 hours",  lat: 10.3567, lon: 123.8839 },
+  { id: 50, name: "SALLEVER Fuel Stop",                  brand: "Other",    address: "Agsungot Road, Agsungot, Cebu City",                    rating: null, hours: "Open 24 hours", lat: 10.4069, lon: 123.8842 },
+  { id: 51, name: "Cogon Gas Station",                   brand: "Other",    address: "Cogon Pardo, Cebu City",                                rating: null, hours: "Open 24 hours", lat: 10.2756, lon: 123.8758 },
+  { id: 52, name: "Aura Fuels Inc",                      brand: "Other",    address: "V Rama Ave, Cebu City",                                 rating: null, hours: "Open 24 hours", lat: 10.3017, lon: 123.8908 },
+  { id: 53, name: "Light Fuels – North Reclamation Area",brand: "Other",    address: "Barangay Mantuyong, Mandaue (near Cebu City border)",   rating: 5.0, hours: "5AM–11PM",        lat: 10.3225, lon: 123.9014 },
+  { id: 54, name: "Oh My Gas Marketing",                 brand: "Other",    address: "Talamban area, Cebu City",                              rating: 5.0, hours: "Open 24 hours",  lat: 10.3717, lon: 123.9131 },
+];
 
 function getBrandFuels(name, brand) {
   const key = [name, brand].find((v) =>
@@ -122,6 +169,15 @@ export default function NearbyStations({ activeTab, onTabChange }) {
   const [expandedId, setExpandedId] = useState(null);
 
   const drawerOpen = drawerHeight > PEEK_HEIGHT + 20;
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const handleBarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = drawerRef.current;
+    if (!el) return;
+    el.style.height = `${drawerHeight}px`;
+    el.style.transition = isDragging ? "none" : "height 0.3s cubic-bezier(0.32,0.72,0,1)";
+  }, [drawerHeight, isDragging]);
 
   // ── Location ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -168,39 +224,22 @@ export default function NearbyStations({ activeTab, onTabChange }) {
     return () => { map.remove(); mapRef.current = null; };
   }, [location]);
 
-  // ── Fetch stations ──────────────────────────────────────────────────────────
+  // ── Load static stations ────────────────────────────────────────────────────
   useEffect(() => {
     if (!location) return;
     const { lat, lon } = location;
     setLoadingStations(true);
-
-    const query = `[out:json][timeout:25];node["amenity"="fuel"](around:5000,${lat},${lon});out body;`;
-    fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const sorted = (data.elements || [])
-          .map((el) => ({
-            id: el.id,
-            name: el.tags?.name || el.tags?.brand || "Gas Station",
-            brand: el.tags?.brand || null,
-            lat: el.lat,
-            lon: el.lon,
-            distance: getDistance(lat, lon, el.lat, el.lon),
-          }))
-          .sort((a, b) => a.distance - b.distance)
-          .slice(0, 10);
-        setStations(sorted);
-      })
-      .catch(() => setStations([]))
-      .finally(() => setLoadingStations(false));
+    const withDistance = STATIC_STATIONS
+      .map((st) => ({ ...st, distance: getDistance(lat, lon, st.lat, st.lon) }))
+      .sort((a, b) => a.distance - b.distance);
+    setStations(withDistance);
+    setLoadingStations(false);
   }, [location]);
 
   const filteredStations =
     activeFilter === "All"
       ? stations
-      : stations.filter((st) =>
-          (st.name + (st.brand || "")).toLowerCase().includes(activeFilter.toLowerCase())
-        );
+      : stations.filter((st) => st.brand === activeFilter);
 
   // ── Markers ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -321,13 +360,24 @@ export default function NearbyStations({ activeTab, onTabChange }) {
     setIsDragging(false);
   };
 
+  useEffect(() => {
+    const el = handleBarRef.current;
+    if (!el) return;
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      handleDragMove(e.touches[0].clientY);
+    };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  });
+
   const handleHandleClick = () => {
     if (isDragging) return;
     setDrawerHeight(drawerOpen ? PEEK_HEIGHT : OPEN_HEIGHT);
   };
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
+    <div className="flex flex-col bg-background h-dvh">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 bg-primary-container shadow-sm shrink-0">
@@ -335,7 +385,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
           <h1 className="text-white font-headline font-bold text-lg leading-none">Nearby Stations</h1>
           <p className="text-[10px] text-white/70 font-bold uppercase tracking-wider mt-0.5">Gas stations within 5 km</p>
         </div>
-        <span className="material-symbols-outlined text-tertiary-fixed ml-auto" style={{ fontSize: "28px", fontVariationSettings: "'FILL' 1" }}>
+        <span className="material-symbols-outlined text-tertiary-fixed ml-auto icon-filled text-[28px]">
           local_gas_station
         </span>
       </div>
@@ -349,10 +399,10 @@ export default function NearbyStations({ activeTab, onTabChange }) {
           </div>
         )}
 
-        <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
+        <div ref={mapContainerRef} className="w-full h-full" />
 
         {/* Filter chips */}
-        <div className="no-scrollbar absolute top-3 left-0 right-0 z-10 flex gap-2 px-3 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+        <div className="no-scrollbar absolute top-3 left-0 right-0 z-10 flex gap-2 px-3 overflow-x-auto">
           {FILTERS.map((f) => {
             const active = activeFilter === f.label;
             return (
@@ -363,7 +413,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
                   active ? "bg-[#003366] text-white border-[#003366]" : "bg-white text-slate-700 border-white/80"
                 }`}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: "14px", fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>
+                <span className={`material-symbols-outlined text-[14px] ${active ? "icon-filled" : "icon-outline"}`}>
                   local_gas_station
                 </span>
                 {f.label}
@@ -375,16 +425,16 @@ export default function NearbyStations({ activeTab, onTabChange }) {
         {/* Map controls */}
         <div className="absolute top-14 right-3 z-10 flex flex-col gap-2">
           <button onClick={() => mapRef.current?.zoomIn()} className="w-9 h-9 bg-white rounded-xl shadow-md flex items-center justify-center text-slate-700 active:scale-95 transition-all border border-white/80">
-            <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>add</span>
+            <span className="material-symbols-outlined text-[20px]">add</span>
           </button>
           <button onClick={() => mapRef.current?.zoomOut()} className="w-9 h-9 bg-white rounded-xl shadow-md flex items-center justify-center text-slate-700 active:scale-95 transition-all border border-white/80">
-            <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>remove</span>
+            <span className="material-symbols-outlined text-[20px]">remove</span>
           </button>
           <button
             onClick={() => location && mapRef.current?.flyTo({ center: [location.lon, location.lat], zoom: 14, duration: 800 })}
             className="w-9 h-9 bg-[#003366] rounded-xl shadow-md flex items-center justify-center text-white active:scale-95 transition-all"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: "20px", fontVariationSettings: "'FILL' 1" }}>my_location</span>
+            <span className="material-symbols-outlined icon-filled text-[20px]">my_location</span>
           </button>
         </div>
 
@@ -396,18 +446,15 @@ export default function NearbyStations({ activeTab, onTabChange }) {
 
         {/* ── Drawer ── */}
         <div
+          ref={drawerRef}
           className="absolute left-0 right-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-2xl flex flex-col overflow-hidden"
-          style={{
-            height: `${drawerHeight}px`,
-            transition: isDragging ? "none" : "height 0.3s cubic-bezier(0.32,0.72,0,1)",
-          }}
         >
           {/* Handle bar — draggable */}
           <div
+            ref={handleBarRef}
             className="flex flex-col items-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing select-none"
             onClick={handleHandleClick}
             onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
-            onTouchMove={(e) => { e.preventDefault(); handleDragMove(e.touches[0].clientY); }}
             onTouchEnd={handleDragEnd}
             onMouseDown={(e) => {
               handleDragStart(e.clientY);
@@ -426,8 +473,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
                 )}
               </div>
               <span
-                className={`material-symbols-outlined text-slate-400 transition-transform duration-300 ${drawerOpen ? "rotate-180" : ""}`}
-                style={{ fontSize: "22px" }}
+                className={`material-symbols-outlined text-slate-400 transition-transform duration-300 text-[22px] ${drawerOpen ? "rotate-180" : ""}`}
               >
                 expand_less
               </span>
@@ -437,7 +483,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
           {/* Route info bar */}
           {(loadingRoute || routeInfo) && selectedStation && (
             <div className="mx-4 mb-2 px-4 py-2.5 bg-[#003366] rounded-xl flex items-center gap-3 shrink-0">
-              <span className="material-symbols-outlined text-white" style={{ fontSize: "20px", fontVariationSettings: "'FILL' 1" }}>route</span>
+              <span className="material-symbols-outlined text-white icon-filled text-[20px]">route</span>
               {loadingRoute ? (
                 <p className="text-white text-xs font-medium">Calculating route…</p>
               ) : (
@@ -447,20 +493,20 @@ export default function NearbyStations({ activeTab, onTabChange }) {
                 </div>
               )}
               <button onClick={() => { clearRoute(); setSelectedStation(null); }} className="text-white/60 hover:text-white shrink-0">
-                <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span>
+                <span className="material-symbols-outlined icon-base">close</span>
               </button>
             </div>
           )}
 
           {/* Station list */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+          <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-4 space-y-2">
             {loadingStations && [1, 2, 3].map((i) => (
               <div key={i} className="h-14 rounded-xl bg-gray-100 animate-pulse" />
             ))}
 
             {!loadingStations && filteredStations.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-                <span className="material-symbols-outlined text-gray-300" style={{ fontSize: "36px" }}>not_listed_location</span>
+                <span className="material-symbols-outlined text-gray-300 text-[36px]">not_listed_location</span>
                 <p className="text-xs text-slate-400 font-medium">No stations found within 5 km.</p>
               </div>
             )}
@@ -503,8 +549,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
                       }`}
                     >
                       <span
-                        className={`material-symbols-outlined transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-                        style={{ fontSize: "18px" }}
+                        className={`material-symbols-outlined transition-transform duration-200 icon-base ${isExpanded ? "rotate-180" : ""}`}
                       >
                         expand_more
                       </span>
@@ -522,7 +567,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
                             <div className={`w-2 h-2 rounded-full shrink-0 ${colors.dot}`} />
                             <p className={`text-xs font-semibold flex-1 ${colors.text}`}>{fuel.name}</p>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/70 ${colors.text}`}>
-                              {fuel.type}
+                              ₱{fuel.price ?? 0}
                             </span>
                           </div>
                         );

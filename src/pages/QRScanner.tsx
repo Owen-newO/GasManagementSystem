@@ -1,23 +1,29 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, type ChangeEvent } from "react";
 import jsQR from "jsqr";
 import Header from "../components/Header";
-import { decodeQR, formatDecodedDate } from "../utils/qrCodec";
+import { decodeQR, formatDecodedDate, type DecodedQR } from "../utils/qrCodec";
 
-export default function QRScanner({ onClose, onSuccess }) {
-  const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const animFrameRef = useRef(null);
-  const streamRef = useRef(null);
-  const redirectTimerRef = useRef(null);
+type ScannerMode = "camera" | "upload";
 
-  const [decoded, setDecoded] = useState(null);
+interface QRScannerProps {
+  onClose: () => void;
+  onSuccess: (decoded: DecodedQR) => void;
+}
+
+export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const [decoded, setDecoded] = useState<DecodedQR | null>(null);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState("camera"); // "camera" | "upload"
+  const [mode, setMode] = useState<ScannerMode>("camera");
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState("");
 
-  const processCode = (raw) => {
+  const processCode = (raw: string) => {
     const result = decodeQR(raw);
     if (!result) {
       setError("Invalid QR code format. Expected format: JOHSMI46111.8560");
@@ -39,7 +45,7 @@ export default function QRScanner({ onClose, onSuccess }) {
       animFrameRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current.getTracks().forEach((t: MediaStreamTrack) => t.stop());
       streamRef.current = null;
     }
     setCameraReady(false);
@@ -121,7 +127,7 @@ export default function QRScanner({ onClose, onSuccess }) {
     onClose();
   };
 
-  const switchMode = (next) => {
+  const switchMode = (next: ScannerMode) => {
     stopCamera();
     setMode(next);
     setDecoded(null);
@@ -129,7 +135,7 @@ export default function QRScanner({ onClose, onSuccess }) {
     setCameraError("");
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -140,6 +146,11 @@ export default function QRScanner({ onClose, onSuccess }) {
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        setError("Could not read image. Please try another file.");
+        URL.revokeObjectURL(url);
+        return;
+      }
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const result = jsQR(imageData.data, imageData.width, imageData.height);
@@ -241,8 +252,7 @@ export default function QRScanner({ onClose, onSuccess }) {
               onClick={() => fileInputRef.current?.click()}
               className="flex flex-col items-center justify-center gap-4 border-2 border-dashed border-white/30 rounded-2xl py-12 text-white/70 hover:border-white/60 hover:text-white transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-5xl text-white/50"
-                style={{ fontVariationSettings: "'FILL' 1" }}>
+              <span className="material-symbols-outlined text-5xl text-white/50 icon-filled">
                 qr_code_scanner
               </span>
               <div className="text-center">
@@ -255,6 +265,7 @@ export default function QRScanner({ onClose, onSuccess }) {
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
+              aria-label="Upload QR image"
               className="hidden"
             />
 
@@ -280,13 +291,70 @@ export default function QRScanner({ onClose, onSuccess }) {
         {decoded && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 bg-green-900/40 border border-green-500/30 px-4 py-3 rounded-xl text-green-300 text-sm">
-              <span className="material-symbols-outlined text-base shrink-0"
-                style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+              <span className="material-symbols-outlined text-base shrink-0 icon-filled">check_circle</span>
               QR code decoded successfully
             </div>
-            <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white/80 text-xs">
-              Redirecting to validation...
+
+            <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
+              <div className="bg-[#003366] px-5 py-4">
+                <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Decoded QR Data</p>
+                <p className="font-mono font-bold text-white text-lg tracking-widest mt-0.5">
+                  {decoded.firstCode}<span className="text-yellow-300">{decoded.lastCode}</span>{decoded.serial}
+                </p>
+              </div>
+
+              <div className="px-5 py-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-xl px-4 py-3">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">First Name Code</p>
+                    <p className="font-headline font-black text-[#003366] text-2xl tracking-widest">{decoded.firstCode}</p>
+                    <p className="text-[9px] text-gray-400 mt-0.5">First 3 letters</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl px-4 py-3">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Last Name Code</p>
+                    <p className="font-headline font-black text-[#003366] text-2xl tracking-widest">{decoded.lastCode}</p>
+                    <p className="text-[9px] text-gray-400 mt-0.5">First 3 letters</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Registered At</p>
+                  <p className="font-bold text-gray-800 text-sm">{formatDecodedDate(decoded.date)}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">Serial: {decoded.serial}</p>
+                </div>
+
+                {decoded.gasType && (
+                  <div className="bg-gray-50 rounded-xl px-4 py-3 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-[#003366] icon-filled icon-base">local_gas_station</span>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Fuel Type</p>
+                      <p className="font-bold text-gray-800 text-sm">{decoded.gasType}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-amber-50 border-l-4 border-amber-400 px-3 py-2.5 rounded-r-xl flex gap-2 items-start">
+                  <span className="material-symbols-outlined text-amber-500 shrink-0 text-[14px]">id_card</span>
+                  <p className="text-[10px] text-amber-800 leading-relaxed">
+                    Verify the resident's name matches the code above. Ask for a valid ID to confirm identity.
+                  </p>
+                </div>
+              </div>
             </div>
+
+            <button
+              onClick={handleConfirm}
+              className="w-full bg-[#003366] text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined icon-filled">verified</span>
+              Confirm & Validate
+            </button>
+            <button
+              onClick={handleScanAnother}
+              className="w-full bg-white/10 text-white font-headline font-bold py-3.5 rounded-xl active:scale-95 transition-all"
+            >
+              Scan Another
+            </button>
           </div>
         )}
       </div>
