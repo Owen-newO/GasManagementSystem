@@ -260,6 +260,7 @@ export default function App() {
           officer={officer}
           activeTab={activeTab}
           onTabChange={handleOfficerTabChange}
+          onScan={handleScan}
         />
       </RoleGuard>
     );
@@ -276,7 +277,7 @@ export default function App() {
           onChangePassword={() => setScreen("change-password")}
           tabs={[
             { id: "dashboard", icon: "dashboard", label: "Dashboard" },
-            { id: "history", icon: "receipt_long", label: "Scan History" },
+            { id: "history", icon: "receipt_long", label: "Transaction" },
             { id: "settings", icon: "account_circle", label: "Account" },
           ]}
         />
