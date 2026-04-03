@@ -9,12 +9,45 @@ function httpErrorMessage(err: unknown): string {
   return "Registration failed. Please try again.";
 }
 
-function getRegisterResidentUrl(): string {
-  const projectId = import.meta.env.VITE_PUBLIC_FIREBASE_PROJECT_ID as string | undefined;
-  const useEmu = import.meta.env.VITE_PUBLIC_USE_EMULATOR === "true";
-  if (import.meta.env.DEV && useEmu && projectId) {
-    return `http://127.0.0.1:5001/${projectId}/asia-southeast1/registerResident`;
+function envValue(...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = import.meta.env[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
   }
+  return undefined;
+}
+
+function getRegisterResidentUrl(): string {
+  const explicitUrl = envValue(
+    "VITE_REGISTER_RESIDENT_URL",
+    "VITE_PUBLIC_REGISTER_RESIDENT_URL",
+  );
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
+  const projectId = envValue(
+    "VITE_FIREBASE_PROJECT_ID",
+    "VITE_PUBLIC_FIREBASE_PROJECT_ID",
+  );
+  const region =
+    envValue(
+      "VITE_FIREBASE_FUNCTIONS_REGION",
+      "VITE_PUBLIC_FIREBASE_FUNCTIONS_REGION",
+    ) ?? "asia-southeast1";
+  const useEmu =
+    envValue("VITE_USE_FIREBASE_EMULATORS", "VITE_PUBLIC_USE_EMULATOR") === "true";
+
+  if (import.meta.env.DEV && useEmu && projectId) {
+    return `http://127.0.0.1:5001/${projectId}/${region}/registerResident`;
+  }
+
+  if (import.meta.env.DEV && projectId) {
+    return `https://${region}-${projectId}.cloudfunctions.net/registerResident`;
+  }
+
   return "/api/registerResident";
 }
 
