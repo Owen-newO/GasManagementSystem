@@ -112,29 +112,41 @@
 
 /* ── Brand card (heatmap panel) ── */
 .brand-card { background: #fff; border-color: #f1f5f9; }
-.brand-dot-shell   { background: #f57c00; }
-.brand-dot-petron  { background: #1976d2; }
-.brand-dot-caltex  { background: #e53935; }
-.brand-dot-phoenix { background: #8e24aa; }
-.brand-dot-seaoil  { background: #43a047; }
+.brand-dot-shell    { background: #f57c00; }
+.brand-dot-petron   { background: #1976d2; }
+.brand-dot-caltex   { background: #e53935; }
+.brand-dot-phoenix  { background: #8e24aa; }
+.brand-dot-seaoil   { background: #43a047; }
+.brand-dot-flyingv  { background: #fbc02d; }
+.brand-dot-diatoms  { background: #00897b; }
+.brand-dot-other    { background: #757575; }
 .brand-card.brand-active-shell   { background: #fff3e0; border-color: #f57c00; }
 .brand-card.brand-active-petron  { background: #e3f2fd; border-color: #1976d2; }
 .brand-card.brand-active-caltex  { background: #fce4ec; border-color: #e53935; }
 .brand-card.brand-active-phoenix { background: #f3e5f5; border-color: #8e24aa; }
 .brand-card.brand-active-seaoil  { background: #e8f5e9; border-color: #43a047; }
+.brand-card.brand-active-flyingv { background: #fff8e1; border-color: #fbc02d; }
+.brand-card.brand-active-diatoms { background: #e0f2f1; border-color: #00897b; }
+.brand-card.brand-active-other   { background: #f5f5f5; border-color: #757575; }
 .brand-card.brand-active-shell   .brand-dot-shell   { background: #fff; }
 .brand-card.brand-active-petron  .brand-dot-petron  { background: #fff; }
 .brand-card.brand-active-caltex  .brand-dot-caltex  { background: #fff; }
 .brand-card.brand-active-phoenix .brand-dot-phoenix { background: #fff; }
 .brand-card.brand-active-seaoil  .brand-dot-seaoil  { background: #fff; }
+.brand-card.brand-active-flyingv .brand-dot-flyingv { background: #fff; }
+.brand-card.brand-active-diatoms .brand-dot-diatoms { background: #fff; }
+.brand-card.brand-active-other   .brand-dot-other   { background: #fff; }
 
 /* ── Heatmap filter chip active states ── */
-.chip-active-all    { background: #003366; color: #fff; border-color: #003366; }
-.chip-active-shell  { background: #f57c00; color: #fff; border-color: #f57c00; }
-.chip-active-petron { background: #1976d2; color: #fff; border-color: #1976d2; }
-.chip-active-caltex { background: #e53935; color: #fff; border-color: #e53935; }
-.chip-active-phoenix{ background: #8e24aa; color: #fff; border-color: #8e24aa; }
-.chip-active-seaoil { background: #43a047; color: #fff; border-color: #43a047; }
+.chip-active-all     { background: #003366; color: #fff; border-color: #003366; }
+.chip-active-shell   { background: #f57c00; color: #fff; border-color: #f57c00; }
+.chip-active-petron  { background: #1976d2; color: #fff; border-color: #1976d2; }
+.chip-active-caltex  { background: #e53935; color: #fff; border-color: #e53935; }
+.chip-active-phoenix { background: #8e24aa; color: #fff; border-color: #8e24aa; }
+.chip-active-seaoil  { background: #43a047; color: #fff; border-color: #43a047; }
+.chip-active-flyingv { background: #fbc02d; color: #fff; border-color: #fbc02d; }
+.chip-active-diatoms { background: #00897b; color: #fff; border-color: #00897b; }
+.chip-active-other   { background: #757575; color: #fff; border-color: #757575; }
 
 /* ── StatCard icon accent colours (AdminDashboard) ── */
 .stat-icon-navy-bg   { background: rgba(0,51,102,0.094); }

@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import BottomNav from "../components/BottomNav";
-
-mapboxgl.accessToken = "pk.eyJ1IjoibWF0YWRldnMiLCJhIjoiY21mNmdhc3YyMGcxdzJrb21xZm80c3NpbCJ9.R0nU8Ip_9RCo-Q2aWxAbXA";
 
 const BRAND_LOGO: Record<string, { bg: string; fg: string; abbr: string }> = {
   Shell:      { bg: "#FBCE07", fg: "#DD1D21", abbr: "SH" },
@@ -161,9 +159,10 @@ function formatDuration(sec) {
 }
 
 export default function NearbyStations({ activeTab, onTabChange }) {
-  const mapContainerRef = useRef(null);
-  const mapRef = useRef(null);
-  const markersRef = useRef([]);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const routeLayersRef = useRef<L.Polyline[]>([]);
   const dragStartY = useRef(null);
   const dragStartHeight = useRef(null);
 
@@ -188,7 +187,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
   const stationRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const stationListRef = useRef<HTMLDivElement>(null);
   const handleBarRef = useRef<HTMLDivElement>(null);
-  const markerElsRef = useRef<Record<number, HTMLElement>>({});
+  const markerElsRef = useRef<Record<number, L.Marker>>({});
 
   useEffect(() => {
     const el = drawerRef.current;
@@ -223,20 +222,21 @@ export default function NearbyStations({ activeTab, onTabChange }) {
   useEffect(() => {
     if (!location || mapRef.current) return;
 
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [location.lon, location.lat],
-      zoom: 14,
-    });
+    const map = L.map(mapContainerRef.current!, { zoomControl: false })
+      .setView([location.lat, location.lon], 14);
 
-    const el = document.createElement("div");
-    el.style.cssText =
-      "width:18px;height:18px;border-radius:50%;background:#003366;border:3px solid #fff;box-shadow:0 0 0 4px rgba(0,51,102,0.25)";
-    new mapboxgl.Marker({ element: el })
-      .setLngLat([location.lon, location.lat])
-      .setPopup(new mapboxgl.Popup({ offset: 12 }).setText("You are here"))
-      .addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+
+    L.circleMarker([location.lat, location.lon] as L.LatLngExpression, {
+      radius: 9,
+      fillColor: "#003366",
+      color: "#fff",
+      weight: 3,
+      fillOpacity: 1,
+    }).bindPopup("You are here").addTo(map);
 
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
@@ -260,6 +260,13 @@ export default function NearbyStations({ activeTab, onTabChange }) {
       : stations.filter((st) => st.brand === activeFilter);
 
   // ── Markers ─────────────────────────────────────────────────────────────────
+  const makeStationIcon = (isActive: boolean) => L.divIcon({
+    html: `<div style="width:32px;height:32px;border-radius:50%;background:${isActive ? "#c9a227" : "#003366"};border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;font-size:${isActive ? "18px" : "16px"};">⛽</div>`,
+    className: "",
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || filteredStations.length === 0) return;
@@ -269,23 +276,11 @@ export default function NearbyStations({ activeTab, onTabChange }) {
     markerElsRef.current = {};
 
     filteredStations.forEach((st) => {
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:32px;height:32px;border-radius:50%;
-        background:#003366;
-        border:2px solid #fff;display:flex;align-items:center;
-        justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35);
-        cursor:pointer;font-size:16px;
-      `;
-      el.innerHTML = "⛽";
-      el.addEventListener("click", () => handleSelectStation(st));
+      const marker = L.marker([st.lat, st.lon] as L.LatLngExpression, { icon: makeStationIcon(false) })
+        .addTo(map)
+        .on("click", () => handleSelectStation(st));
 
-      markerElsRef.current[st.id] = el;
-
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([st.lon, st.lat])
-        .addTo(map);
-
+      markerElsRef.current[st.id] = marker;
       markersRef.current.push(marker);
     });
   }, [filteredStations]);
@@ -293,15 +288,13 @@ export default function NearbyStations({ activeTab, onTabChange }) {
   // ── Sync marker highlight with selectedStation ───────────────────────────────
   useEffect(() => {
     filteredStations.forEach((st) => {
-      const el = markerElsRef.current[st.id];
-      if (!el) return;
-      const isActive = selectedStation?.id === st.id;
-      el.style.background = isActive ? "#c9a227" : "#003366";
-      el.style.fontSize = isActive ? "18px" : "16px";
+      const marker = markerElsRef.current[st.id];
+      if (!marker) return;
+      marker.setIcon(makeStationIcon(selectedStation?.id === st.id));
     });
   }, [selectedStation, filteredStations]);
 
-  // ── Route drawing ───────────────────────────────────────────────────────────
+  // ── Route drawing (OSRM open routing) ──────────────────────────────────────
   const drawRoute = async (st) => {
     if (!location) return;
     const map = mapRef.current;
@@ -311,42 +304,30 @@ export default function NearbyStations({ activeTab, onTabChange }) {
     setRouteInfo(null);
 
     try {
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${location.lon},${location.lat};${st.lon},${st.lat}?geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`;
+      const url = `https://router.project-osrm.org/route/v1/driving/${location.lon},${location.lat};${st.lon},${st.lat}?geometries=geojson&overview=full`;
       const data = await fetch(url).then((r) => r.json());
       const route = data.routes?.[0];
       if (!route) return;
 
       setRouteInfo({ distance: route.distance, duration: route.duration });
 
-      if (map.getLayer("route-outline")) map.removeLayer("route-outline");
-      if (map.getLayer("route-line")) map.removeLayer("route-line");
-      if (map.getSource("route")) map.removeSource("route");
+      // Clear old route
+      routeLayersRef.current.forEach((l) => l.remove());
+      routeLayersRef.current = [];
 
-      map.addSource("route", {
-        type: "geojson",
-        data: { type: "Feature", geometry: route.geometry },
-      });
-      map.addLayer({
-        id: "route-outline",
-        type: "line",
-        source: "route",
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#fff", "line-width": 8, "line-opacity": 0.8 },
-      });
-      map.addLayer({
-        id: "route-line",
-        type: "line",
-        source: "route",
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#003366", "line-width": 5, "line-opacity": 0.95 },
-      });
+      // OSRM returns [lon, lat]; Leaflet needs [lat, lon]
+      const coords: [number, number][] = route.geometry.coordinates.map(([lon, lat]: [number, number]) => [lat, lon]);
 
-      const coords = route.geometry.coordinates;
-      const bounds = coords.reduce(
-        (b, c) => b.extend(c),
-        new mapboxgl.LngLatBounds(coords[0], coords[0])
-      );
-      map.fitBounds(bounds, { padding: { top: 80, bottom: OPEN_HEIGHT + 24, left: 40, right: 40 }, duration: 900 });
+      const outline = L.polyline(coords, { color: "#fff", weight: 8, opacity: 0.8 }).addTo(map);
+      const line    = L.polyline(coords, { color: "#003366", weight: 5, opacity: 0.95 }).addTo(map);
+      routeLayersRef.current = [outline, line];
+
+      map.fitBounds(L.latLngBounds(coords), {
+        paddingTopLeft: [40, 80],
+        paddingBottomRight: [40, OPEN_HEIGHT + 24],
+        animate: true,
+        duration: 0.9,
+      });
     } catch {
       // silently fail
     } finally {
@@ -355,11 +336,8 @@ export default function NearbyStations({ activeTab, onTabChange }) {
   };
 
   const clearRoute = () => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (map.getLayer("route-outline")) map.removeLayer("route-outline");
-    if (map.getLayer("route-line")) map.removeLayer("route-line");
-    if (map.getSource("route")) map.removeSource("route");
+    routeLayersRef.current.forEach((l) => l.remove());
+    routeLayersRef.current = [];
     setRouteInfo(null);
   };
 
@@ -368,7 +346,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
     setExpandedId(st.id);
     setDrawerHeight(OPEN_HEIGHT);
     drawRoute(st);
-    mapRef.current?.flyTo({ center: [st.lon, st.lat], zoom: 15, duration: 800 });
+    mapRef.current?.flyTo([st.lat, st.lon], 15);
     setTimeout(() => {
       const listEl = stationListRef.current;
       const stationEl = stationRefs.current[st.id];
@@ -473,7 +451,7 @@ export default function NearbyStations({ activeTab, onTabChange }) {
             <span className="material-symbols-outlined text-[20px]">remove</span>
           </button>
           <button
-            onClick={() => location && mapRef.current?.flyTo({ center: [location.lon, location.lat], zoom: 14, duration: 800 })}
+            onClick={() => location && mapRef.current?.flyTo([location.lat, location.lon], 14)}
             className="w-9 h-9 bg-[#003366] rounded-xl shadow-md flex items-center justify-center text-white active:scale-95 transition-all"
           >
             <span className="material-symbols-outlined icon-filled text-[20px]">my_location</span>

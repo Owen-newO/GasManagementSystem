@@ -284,14 +284,11 @@ export default function AdminDashboard({ onLogout }) {
 
     STATIONS.forEach((s) => {
       const intensity = Math.min(s.dispensed / 1000, 6);
-      const heatColor =
-        intensity > 4 ? "#c81414" :
-        intensity > 2 ? "#ff5000" :
-        intensity > 1 ? "#ffb400" : "#0064c8";
+      const brandDotColor = (BRAND_COLORS[s.brand as keyof typeof BRAND_COLORS] ?? BRAND_COLORS.Other).dot;
 
       const heat = L.circleMarker([s.lat, s.lng] as L.LatLngExpression, {
         radius: 30 + intensity * 8,
-        fillColor: heatColor,
+        fillColor: brandDotColor,
         fillOpacity: 0.28,
         color: "transparent",
         weight: 0,
@@ -305,10 +302,9 @@ export default function AdminDashboard({ onLogout }) {
           <span style="color:#003366;font-weight:700;font-size:12px;margin-left:12px">₱${p.price.toFixed(2)}/L</span>
         </div>`
       ).join("");
-
       const dot = L.circleMarker([s.lat, s.lng] as L.LatLngExpression, {
         radius: 7,
-        fillColor: "#003366",
+        fillColor: brandDotColor,
         color: "#fff",
         weight: 2,
         fillOpacity: 1,
@@ -1206,13 +1202,6 @@ export default function AdminDashboard({ onLogout }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowInviteModal(true)}
-                      className="flex items-center gap-1.5 bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors shadow-sm"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">send</span>
-                      Invite Stations
-                    </button>
                     <div className="relative">
                       <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
                       <input type="text" placeholder="Search station, brand, barangay…" value={stationSearch}
@@ -1225,6 +1214,13 @@ export default function AdminDashboard({ onLogout }) {
                         </button>
                       )}
                     </div>
+                    <button
+                      onClick={() => setShowInviteModal(true)}
+                      className="flex items-center gap-1.5 bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">send</span>
+                      Invite Stations
+                    </button>
                   </div>
                 </div>
                 <table className="w-full text-sm">

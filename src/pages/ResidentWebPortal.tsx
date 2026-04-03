@@ -112,8 +112,8 @@ export default function ResidentWebPortal({ resident, onLogout }) {
   const [brandFilter, setBrandFilter]           = useState("All");
   const [selectedStation, setSelectedStation]   = useState<typeof ALL_STATIONS[0] | null>(null);
   const mapRef                          = useRef<HTMLDivElement>(null);
-  const mapInst                         = useRef<mapboxgl.Map | null>(null);
-  const markerEls                       = useRef<Record<number, HTMLElement>>({});
+  const mapInst                         = useRef<L.Map | null>(null);
+  const markerEls                       = useRef<Record<number, L.Marker>>({});
   const stationListRef                  = useRef<HTMLDivElement>(null);
   const stationRowRefs                  = useRef<Record<number, HTMLElement | null>>({});
   const qrRef                           = useRef<HTMLDivElement>(null);
@@ -144,47 +144,46 @@ export default function ResidentWebPortal({ resident, onLogout }) {
     const el = mapRef.current;
     if (!el || mapInst.current) return;
 
-    const map = new mapboxgl.Map({
-      container: el,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [123.8950, 10.3200],
-      zoom: 11.5,
-      fadeDuration: 0,
-    });
+    const map = L.map(el).setView([10.3200, 123.8950], 11.5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
     mapInst.current = map;
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
-    map.on("load", () => {
-      ALL_STATIONS.forEach((st) => {
-        const markerEl = document.createElement("div");
-        markerEl.style.cssText =
-          "width:32px;height:32px;border-radius:50%;background:#003366;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;";
-        markerEl.innerHTML = `<span class="material-symbols-outlined" style="color:#f9c23c;font-size:16px;font-variation-settings:'FILL' 1">local_gas_station</span>`;
-        markerEl.addEventListener("click", () => {
+    const makeIcon = (isActive: boolean) => L.divIcon({
+      html: `<div style="width:32px;height:32px;border-radius:50%;background:${isActive ? "#f9c23c" : "#003366"};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;">⛽</div>`,
+      className: "",
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+
+    ALL_STATIONS.forEach((st) => {
+      const marker = L.marker([st.lat, st.lng] as L.LatLngExpression, { icon: makeIcon(false) })
+        .addTo(map)
+        .on("click", () => {
           setSelectedStation(st);
-          map.flyTo({ center: [st.lng, st.lat], zoom: 14, duration: 600 });
+          map.flyTo([st.lat, st.lng] as L.LatLngExpression, 14);
         });
-
-        markerEls.current[st.id] = markerEl;
-
-        new mapboxgl.Marker({ element: markerEl })
-          .setLngLat([st.lng, st.lat])
-          .addTo(map);
-      });
+      markerEls.current[st.id] = marker;
     });
 
     return () => { map.remove(); mapInst.current = null; markerEls.current = {}; };
   }, [activePage]);
 
-  /* ── Sync marker colors + auto-scroll list when selectedStation changes ── */
+  /* ── Sync marker icons + auto-scroll list when selectedStation changes ── */
   useEffect(() => {
+    const map = mapInst.current;
+    const makeIcon = (isActive: boolean) => L.divIcon({
+      html: `<div style="width:32px;height:32px;border-radius:50%;background:${isActive ? "#f9c23c" : "#003366"};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;">⛽</div>`,
+      className: "",
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
     ALL_STATIONS.forEach((st) => {
-      const el = markerEls.current[st.id];
-      if (!el) return;
-      const isActive = selectedStation?.id === st.id;
-      el.style.background = isActive ? "#f9c23c" : "#003366";
-      const icon = el.querySelector("span");
-      if (icon) (icon as HTMLElement).style.color = isActive ? "#003366" : "#f9c23c";
+      const marker = markerEls.current[st.id];
+      if (!marker) return;
+      marker.setIcon(makeIcon(selectedStation?.id === st.id));
     });
 
     if (!selectedStation) return;
@@ -193,14 +192,18 @@ export default function ResidentWebPortal({ resident, onLogout }) {
     if (!listEl || !rowEl) return;
     const offset = rowEl.getBoundingClientRect().top - listEl.getBoundingClientRect().top + listEl.scrollTop - 8;
     listEl.scrollTo({ top: offset, behavior: "smooth" });
+    if (map) map.flyTo([selectedStation.lat, selectedStation.lng] as L.LatLngExpression, 14);
   }, [selectedStation]);
 
   /* ── Filter map markers by brand ── */
   useEffect(() => {
+    const map = mapInst.current;
+    if (!map) return;
     ALL_STATIONS.forEach((st) => {
-      const el = markerEls.current[st.id];
-      if (!el) return;
-      el.style.display = (brandFilter === "All" || st.brand === brandFilter) ? "flex" : "none";
+      const marker = markerEls.current[st.id];
+      if (!marker) return;
+      const show = brandFilter === "All" || st.brand === brandFilter;
+      if (show) marker.addTo(map); else marker.remove();
     });
   }, [brandFilter]);
 
@@ -712,7 +715,7 @@ export default function ResidentWebPortal({ resident, onLogout }) {
                             type="button"
                             onClick={() => {
                               setSelectedStation(st);
-                              mapInst.current?.flyTo({ center: [st.lng, st.lat], zoom: 14, duration: 600 });
+                              mapInst.current?.flyTo([st.lat, st.lng] as L.LatLngExpression, 14);
                             }}
                             className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 last:border-0 text-left ${
                               isSelected ? "bg-[#003366]" : "hover:bg-slate-50"
