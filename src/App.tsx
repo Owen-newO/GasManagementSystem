@@ -266,7 +266,7 @@ export default function App() {
           onShowQR={() => setScreen("qr-display")}
           tabs={[
             { id: "dashboard", icon: "dashboard", label: "Dashboard" },
-            { id: "user-history", icon: "receipt_long", label: "Scan History" },
+            { id: "user-history", icon: "receipt_long", label: "Transactions" },
             { id: "map", icon: "map", label: "Map" },
             { id: "settings", icon: "account_circle", label: "Account" },
           ]}
@@ -282,6 +282,7 @@ export default function App() {
           resident={resident}
           activeTab={activeTab}
           onTabChange={handleUserTabChange}
+          onShowQR={() => setScreen("qr-display")}
         />
       </RoleGuard>
     );
