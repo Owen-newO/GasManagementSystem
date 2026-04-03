@@ -20,6 +20,13 @@ dist-ssr
 # Claude AI settings
 .claude
 
+# AI agent / IDE tool artifacts
+.agents/
+.augment/
+.firebase/
+.junie/
+skills-lock.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
