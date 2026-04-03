@@ -61,7 +61,7 @@ function downloadCSV(data: typeof history, filterLabel: string) {
 
 const PAGE_SIZE = 10;
 
-export default function ScanHistory({ activeTab, onTabChange }) {
+export default function ScanHistory({ officer, activeTab, onTabChange }) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [page, setPage] = useState(1);
 

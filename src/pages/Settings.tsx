@@ -12,7 +12,7 @@ const menuItems = [
 
 const USER_TABS = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard" },
-  { id: "user-history", icon: "receipt_long", label: "Scan History" },
+  { id: "user-history", icon: "receipt_long", label: "Transactions" },
   { id: "map", icon: "map", label: "Map" },
   { id: "settings", icon: "account_circle", label: "Account" },
 ];
