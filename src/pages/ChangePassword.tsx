@@ -145,7 +145,7 @@ export default function ChangePassword({ onSuccess }: ChangePasswordProps) {
               className="w-full bg-[#003366] text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all mt-2"
               style={{ boxShadow: "0 8px 24px rgba(0,51,102,0.30)" }}
             >
-              Change Password
+              Update Password
             </button>
           </form>
         )}
