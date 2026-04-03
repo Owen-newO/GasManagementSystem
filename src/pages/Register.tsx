@@ -213,8 +213,13 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
     }
   };
 
+  /* Mobile: original theme styles → Desktop: clean bordered card style */
+  const inputCls = "w-full bg-surface-container-lowest md:bg-white border border-outline-variant md:border-slate-300 rounded-xl md:rounded-lg py-3.5 md:py-3 px-4 text-sm focus:outline-none focus:border-primary-container md:focus:border-[#003366] focus:ring-2 focus:ring-primary-container/20 md:focus:ring-[#003366]/15 transition-all";
+  const labelCls = "text-xs font-bold text-on-surface-variant uppercase tracking-wider";
+  const btnCls   = "w-full bg-primary-container md:bg-[#003366] md:hover:bg-[#002244] text-white font-headline font-bold py-4 md:py-3.5 rounded-xl md:rounded-lg shadow-lg md:shadow-md active:scale-95 transition-all";
+
   return (
-    <div className="flex flex-col min-h-dvh bg-background">
+    <div className="flex flex-col min-h-dvh bg-background md:bg-[#edf0f5]">
 
       {/* Confirm modal */}
       {showConfirm && (
@@ -256,23 +261,25 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 bg-slate-100/80 backdrop-blur-md shadow-sm sticky top-0 z-40">
+      <div className="flex items-center gap-2 px-6 py-4 bg-slate-100/80 md:bg-[#edf0f5] backdrop-blur-md shadow-sm md:shadow-none sticky top-0 z-40">
         <button type="button" onClick={handleBack} aria-label="Go back"
-          className="p-2 hover:bg-slate-200/50 rounded-full transition-all active:scale-95 text-[#003366]">
-          <span className="material-symbols-outlined">arrow_back</span>
+          className="p-1.5 hover:bg-slate-200/50 rounded-full transition-all active:scale-95 text-[#003366]">
+          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
         </button>
-        <div>
-          <h1 className="text-[#003366] font-headline font-bold text-lg leading-none">Citizen Portal</h1>
-          <p className="text-[10px] text-[#003366] font-black uppercase tracking-wider opacity-70">Resident Registration</p>
-        </div>
+        <p className="text-sm text-slate-500">
+          <span className="font-medium text-[#003366]">Citizen Portal</span>
+          <span className="mx-1 text-slate-400">/</span>
+          <span className="font-black text-[#003366] uppercase tracking-wide text-xs">Resident Registration</span>
+        </p>
       </div>
 
-      <main className="flex-1 px-6 pt-6 pb-12 max-w-md mx-auto w-full">
+      <main className="flex-1 px-6 pt-6 pb-12 md:pt-4 md:pb-10 w-full max-w-xl mx-auto">
+        <div className="md:bg-white md:rounded-2xl md:shadow-xl md:px-10 md:py-8">
 
         {/* Page title */}
         <div className="mb-5">
-          <h2 className="font-headline font-extrabold text-primary text-2xl">Register Account</h2>
-          <p className="text-on-surface-variant text-sm mt-1">Fill in your personal and vehicle details.</p>
+          <h2 className="font-headline font-extrabold text-[#003366] text-2xl">Register Account</h2>
+          <p className="text-slate-500 text-sm mt-1">Fill in your personal and vehicle details.</p>
         </div>
 
         {/* Tab step switcher — sliding indicator */}
@@ -316,74 +323,58 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
         {step === 1 && (
           <>
 
-            <form onSubmit={handleStep1} className="space-y-5">
+            <form onSubmit={handleStep1} className="space-y-4">
 
               {/* Representative Name — side by side */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                  Representative Name
-                </label>
+                <label className={labelCls}>Representative Name</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={form.firstName}
-                    onChange={handleChange}
-                    placeholder="First name"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all"
-                  />
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={form.lastName}
-                    onChange={handleChange}
-                    placeholder="Last name"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 px-4 text-sm focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all"
-                  />
+                  <input type="text" name="firstName" value={form.firstName} onChange={handleChange} placeholder="First name" className={inputCls} />
+                  <input type="text" name="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" className={inputCls} />
                 </div>
               </div>
 
               {/* Barangay */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Barangay</label>
+                <label className={labelCls}>Barangay</label>
                 <BarangayPicker value={form.barangay} onChange={(b) => { setForm((p) => ({ ...p, barangay: b })); setError(""); }} />
               </div>
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Email</label>
+                <label className={labelCls}>Email</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">mail</span>
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">mail</span>
                   <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="e.g. juan@email.com"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" />
+                    className={`${inputCls} pl-12`} />
                 </div>
               </div>
 
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Password</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">lock</span>
-                  <input type={showPassword ? "text" : "password"} name="password" value={form.password} onChange={handleChange} placeholder="Min. 6 characters"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-12 text-sm focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" />
-                  <button type="button" onClick={() => setShowPassword((p) => !p)} aria-label={showPassword ? "Hide password" : "Show password"}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
-                    <span className="material-symbols-outlined text-xl">{showPassword ? "visibility_off" : "visibility"}</span>
-                  </button>
+              {/* Password + Confirm — stacked on mobile, side by side on desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-3">
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Password</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">lock</span>
+                    <input type={showPassword ? "text" : "password"} name="password" value={form.password} onChange={handleChange} placeholder="Min. 6 characters"
+                      className={`${inputCls} pl-12 pr-12`} />
+                    <button type="button" onClick={() => setShowPassword((p) => !p)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
+                      <span className="material-symbols-outlined text-xl">{showPassword ? "visibility_off" : "visibility"}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Confirm Password</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">lock</span>
-                  <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={form.confirmPassword} onChange={handleChange} placeholder="Re-enter password"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-12 text-sm focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" />
-                  <button type="button" onClick={() => setShowConfirmPassword((p) => !p)} aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
-                    <span className="material-symbols-outlined text-xl">{showConfirmPassword ? "visibility_off" : "visibility"}</span>
-                  </button>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Confirm Password</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">lock</span>
+                    <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={form.confirmPassword} onChange={handleChange} placeholder="Re-enter password"
+                      className={`${inputCls} pl-12 pr-12`} />
+                    <button type="button" onClick={() => setShowConfirmPassword((p) => !p)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
+                      <span className="material-symbols-outlined text-xl">{showConfirmPassword ? "visibility_off" : "visibility"}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -394,10 +385,7 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
                 </div>
               )}
 
-              <button type="submit"
-                className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all">
-                Next
-              </button>
+              <button type="submit" className={`${btnCls} mt-1`}>Next</button>
             </form>
           </>
         )}
@@ -406,10 +394,10 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
         {step === 2 && (
           <>
 
-            <form onSubmit={handleStep2} className="space-y-5">
+            <form onSubmit={handleStep2} className="space-y-4">
               {/* Vehicle Type */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Vehicle Type</label>
+                <label className={labelCls}>Vehicle Type</label>
                 <div className="grid grid-cols-3 gap-3">
                   {VEHICLE_TYPES.map((v) => {
                     const active = vehicleType === v.id;
@@ -432,21 +420,21 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
 
               {/* Plate No. */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Plate No.</label>
+                <label className={labelCls}>Plate No.</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">
                     {vehicleType === "motorcycle" ? "two_wheeler" : vehicleType === "truck" ? "local_shipping" : "directions_car"}
                   </span>
                   <input type="text" name="plate" value={form.plate} onChange={handleChange}
                     placeholder={vehicleType === "motorcycle" ? "e.g. 1234AB" : "e.g. ABC-1234"}
                     maxLength={10}
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl py-3.5 pl-12 pr-4 text-sm uppercase tracking-widest font-bold focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" />
+                    className={`${inputCls} pl-12 uppercase tracking-widest font-bold`} />
                 </div>
               </div>
 
               {/* Fuel Type */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Fuel Type</label>
+                <label className={labelCls}>Fuel Type</label>
                 <GasTypePicker value={gasType} onChange={(g) => { setGasType(g); setError(""); }} />
               </div>
 
@@ -490,14 +478,15 @@ export default function Register({ onBack, onSuccess }: { onBack: () => void; on
                 </span>
               </label>
 
-              <button type="submit"
-                className="w-full bg-primary-container text-white font-headline font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+              <button type="submit" className={`${btnCls} flex items-center justify-center gap-2 mt-1`}>
                 <span className="material-symbols-outlined icon-fill">how_to_reg</span>
                 Register
               </button>
             </form>
           </>
         )}
+
+        </div>
       </main>
     </div>
   );

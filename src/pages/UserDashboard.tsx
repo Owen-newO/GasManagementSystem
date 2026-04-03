@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import BottomNav from "../components/BottomNav";
-
-mapboxgl.accessToken = "pk.eyJ1IjoibWF0YWRldnMiLCJhIjoiY21mNmdhc3YyMGcxdzJrb21xZm80c3NpbCJ9.R0nU8Ip_9RCo-Q2aWxAbXA";
 
 const DEFAULT_LAT = 10.3157;
 const DEFAULT_LON = 123.8854;
@@ -109,40 +107,36 @@ export default function UserDashboard({ resident, activeTab, onTabChange, onShow
   useEffect(() => {
     if (!mapPreviewRef.current || mapInstanceRef.current) return;
 
-    // Start map immediately with default center — don't wait for GPS
-    const map = new mapboxgl.Map({
-      container: mapPreviewRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [DEFAULT_LON, DEFAULT_LAT],
-      zoom: 13,
-      interactive: false,
+    const map = L.map(mapPreviewRef.current, {
+      zoomControl: false,
+      dragging: false,
+      touchZoom: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      keyboard: false,
       attributionControl: false,
-      fadeDuration: 0,
-    });
+    }).setView([DEFAULT_LAT, DEFAULT_LON], 13);
 
-    const markerEl = document.createElement("div");
-    markerEl.style.cssText =
-      "width:14px;height:14px;border-radius:50%;background:#003366;border:2px solid #fff;box-shadow:0 0 0 3px rgba(0,51,102,0.25)";
-    const marker = new mapboxgl.Marker({ element: markerEl })
-      .setLngLat([DEFAULT_LON, DEFAULT_LAT])
-      .addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+    }).addTo(map);
 
-    map.once("load", () => {
-      const container = mapPreviewRef.current;
-      if (!container) return;
-      (container.querySelector(".mapboxgl-ctrl-logo") as HTMLElement | null)?.style.setProperty("display", "none", "important");
-      (container.querySelector(".mapboxgl-ctrl-attrib") as HTMLElement | null)?.style.setProperty("display", "none", "important");
-    });
+    const marker = L.circleMarker([DEFAULT_LAT, DEFAULT_LON] as L.LatLngExpression, {
+      radius: 7,
+      fillColor: "#003366",
+      color: "#fff",
+      weight: 2,
+      fillOpacity: 1,
+    }).addTo(map);
 
     mapInstanceRef.current = map;
 
-    // Update center once GPS resolves
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude: lat, longitude: lon } = pos.coords;
-          map.setCenter([lon, lat]);
-          marker.setLngLat([lon, lat]);
+          map.setView([lat, lon], 13);
+          marker.setLatLng([lat, lon]);
         },
         () => {},
         { timeout: 5000, maximumAge: 60000 }

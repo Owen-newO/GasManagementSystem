@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-
-mapboxgl.accessToken = "pk.eyJ1IjoibWF0YWRldnMiLCJhIjoiY21mNmdhc3YyMGcxdzJrb21xZm80c3NpbCJ9.R0nU8Ip_9RCo-Q2aWxAbXA";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 /* ─── Mock Data ─── */
 const STATIONS = [
@@ -197,6 +196,9 @@ export default function AdminDashboard({ onLogout }) {
 
   const [stationSearch, setStationSearch] = useState("");
   const [stationPage, setStationPage] = useState(1);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteLink, setInviteLink] = useState("https://agas.ph/kHBhskkc-fuel-station-registration");
+  const [inviteCopied, setInviteCopied] = useState(false);
   const STATIONS_PER_PAGE = 10;
 
   const [allocStationPage, setAllocStationPage] = useState(1);
@@ -263,123 +265,91 @@ export default function AdminDashboard({ onLogout }) {
   const totalUsed       = RESIDENTS.reduce((s, r) => s + r.used, 0);
   const utilizationPct  = Math.min(100, Math.round((totalUsed / weeklyQuota) * 100));
 
-  /* ── Mapbox init (heatmap page or overview) ── */
+  /* ── Leaflet heatmap markers ref ── */
+  const heatMarkersRef = useRef<{ s: typeof STATIONS[0]; heat: L.CircleMarker; dot: L.CircleMarker }[]>([]);
+
+  /* ── Leaflet init (heatmap / overview page) ── */
   useEffect(() => {
     if (activePage !== "heatmap" && activePage !== "overview") return;
     const el = mapRef.current;
     if (!el || mapInst.current) return;
 
-    const map = new mapboxgl.Map({
-      container: el,
-      style:  "mapbox://styles/mapbox/light-v11",
-      center: [123.9000, 10.3157],
-      zoom:   11.5,
-      interactive: true,
-    });
+    const map = L.map(el, { zoomControl: true }).setView([10.3157, 123.9000], 11.5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+
     mapInst.current = map;
 
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    STATIONS.forEach((s) => {
+      const intensity = Math.min(s.dispensed / 1000, 6);
+      const heatColor =
+        intensity > 4 ? "#c81414" :
+        intensity > 2 ? "#ff5000" :
+        intensity > 1 ? "#ffb400" : "#0064c8";
 
-    map.on("load", () => {
-      const geojson = {
-        type: "FeatureCollection",
-        features: STATIONS.map(s => ({
-          type: "Feature",
-          properties: {
-            name: s.name,
-            brand: s.brand,
-            dispensed: s.dispensed,
-            intensity: s.dispensed / 1000,
-            status: s.status,
-            prices: JSON.stringify(BRAND_PRICES[s.brand] ?? BRAND_PRICES.Other),
-          },
-          geometry: { type: "Point", coordinates: [s.lng, s.lat] },
-        })),
-      };
+      const heat = L.circleMarker([s.lat, s.lng] as L.LatLngExpression, {
+        radius: 30 + intensity * 8,
+        fillColor: heatColor,
+        fillOpacity: 0.28,
+        color: "transparent",
+        weight: 0,
+      }).addTo(map);
 
-      map.addSource("stations", { type: "geojson", data: geojson as any });
+      const prices = BRAND_PRICES[s.brand] ?? BRAND_PRICES.Other;
+      const statusColor = s.status === "Online" ? "#2e7d32" : "#c62828";
+      const priceRows = prices.map((p: { label: string; price: number }) =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9">
+          <span style="color:#555;font-size:11px">${p.label}</span>
+          <span style="color:#003366;font-weight:700;font-size:12px;margin-left:12px">₱${p.price.toFixed(2)}/L</span>
+        </div>`
+      ).join("");
 
-      map.addLayer({
-        id: "heat",
-        type: "heatmap",
-        source: "stations",
-        paint: {
-          "heatmap-weight":     ["interpolate", ["linear"], ["get", "intensity"], 0, 0, 6, 1],
-          "heatmap-intensity":  ["interpolate", ["linear"], ["zoom"], 10, 1, 14, 2],
-          "heatmap-color": [
-            "interpolate", ["linear"], ["heatmap-density"],
-            0,   "rgba(0,51,102,0)",
-            0.2, "rgba(0,100,200,0.45)",
-            0.5, "rgba(255,180,0,0.7)",
-            0.8, "rgba(255,80,0,0.85)",
-            1,   "rgba(200,20,20,1)",
-          ],
-          "heatmap-radius":  ["interpolate", ["linear"], ["zoom"], 10, 30, 14, 55],
-          "heatmap-opacity": 0.78,
-        },
-      });
+      const dot = L.circleMarker([s.lat, s.lng] as L.LatLngExpression, {
+        radius: 7,
+        fillColor: "#003366",
+        color: "#fff",
+        weight: 2,
+        fillOpacity: 1,
+      }).addTo(map);
 
-      map.addLayer({
-        id: "circles",
-        type: "circle",
-        source: "stations",
-        paint: {
-          "circle-radius":       7,
-          "circle-color":        "#003366",
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-        },
-      });
+      dot.bindPopup(`
+        <div style="font:13px/1.5 system-ui,sans-serif;padding:2px 0;min-width:200px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <strong style="color:#003366;font-size:13px;flex:1">${s.name}</strong>
+            <span style="font-size:10px;font-weight:700;color:${statusColor};background:${s.status === "Online" ? "#e8f5e9" : "#ffebee"};padding:2px 7px;border-radius:99px">${s.status}</span>
+          </div>
+          <span style="color:#888;font-size:11px">${s.brand}</span>
+          <div style="margin:8px 0 6px;background:#fff3e0;border-radius:6px;padding:4px 8px;display:inline-block">
+            <span style="color:#e65100;font-weight:700;font-size:12px">⛽ ${s.dispensed.toLocaleString()} L dispensed</span>
+          </div>
+          <div style="border-top:2px solid #003366;padding-top:6px;margin-top:2px">
+            <div style="font-size:10px;font-weight:700;color:#003366;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Fuel Prices</div>
+            ${priceRows}
+          </div>
+        </div>`, { maxWidth: 240 });
 
-      map.on("click", "circles", (e) => {
-        const feature = e.features?.[0] as any;
-        if (!feature) return;
-        const { name, brand, dispensed, status, prices: pricesRaw } = feature.properties || {};
-        const coords = feature.geometry?.coordinates?.slice();
-        if (!coords) return;
-        const prices: { label: string; price: number }[] = JSON.parse(pricesRaw || "[]");
-        const statusColor = status === "Online" ? "#2e7d32" : "#c62828";
-        const priceRows = prices.map(p =>
-          `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9">
-            <span style="color:#555;font-size:11px">${p.label}</span>
-            <span style="color:#003366;font-weight:700;font-size:12px;margin-left:12px">₱${p.price.toFixed(2)}/L</span>
-          </div>`
-        ).join("");
-        new mapboxgl.Popup({ offset: 14, closeButton: true, maxWidth: "240px" })
-          .setLngLat(coords)
-          .setHTML(`
-            <div style="font:13px/1.5 system-ui,sans-serif;padding:2px 0">
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                <strong style="color:#003366;font-size:13px;flex:1">${name}</strong>
-                <span style="font-size:10px;font-weight:700;color:${statusColor};background:${status === "Online" ? "#e8f5e9" : "#ffebee"};padding:2px 7px;border-radius:99px">${status}</span>
-              </div>
-              <span style="color:#888;font-size:11px">${brand}</span>
-              <div style="margin:8px 0 6px;background:#fff3e0;border-radius:6px;padding:4px 8px;display:inline-block">
-                <span style="color:#e65100;font-weight:700;font-size:12px">⛽ ${dispensed.toLocaleString()} L dispensed</span>
-              </div>
-              <div style="border-top:2px solid #003366;padding-top:6px;margin-top:2px">
-                <div style="font-size:10px;font-weight:700;color:#003366;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Fuel Prices</div>
-                ${priceRows}
-              </div>
-            </div>`)
-          .addTo(map);
-      });
-
-      map.on("mouseenter", "circles", () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "circles", () => { map.getCanvas().style.cursor = ""; });
+      heatMarkersRef.current.push({ s, heat, dot });
     });
 
-    return () => { map.remove(); mapInst.current = null; };
+    return () => {
+      heatMarkersRef.current = [];
+      map.remove();
+      mapInst.current = null;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePage]);
 
-  /* ── Sync heatmap brand filter → Mapbox layer filter ── */
+  /* ── Sync heatmap brand filter ── */
   useEffect(() => {
     const map = mapInst.current;
-    if (!map || !map.isStyleLoaded()) return;
-    const f = heatmapFilter === "All" ? null : ["==", ["get", "brand"], heatmapFilter];
-    if (map.getLayer("circles")) map.setFilter("circles", f);
-    if (map.getLayer("heat"))    map.setFilter("heat",    f);
+    if (!map) return;
+    heatMarkersRef.current.forEach(({ s, heat, dot }) => {
+      const show = heatmapFilter === "All" || s.brand === heatmapFilter;
+      if (show) { heat.addTo(map); dot.addTo(map); }
+      else       { heat.remove(); dot.remove(); }
+    });
   }, [heatmapFilter]);
 
   const brandList        = ["All", ...Object.keys(BRAND_COLORS)];
@@ -1171,6 +1141,62 @@ export default function AdminDashboard({ onLogout }) {
                 ))}
               </div>
 
+              {/* ── Invite Stations Modal ── */}
+              {showInviteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40" onClick={() => setShowInviteModal(false)} />
+                  <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+                    <button onClick={() => setShowInviteModal(false)}
+                      className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                      <span className="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                    <h3 className="font-headline font-bold text-slate-800 text-lg text-center mb-5">Invite Link</h3>
+
+                    {/* Link + Copy inline */}
+                    <label htmlFor="invite-link-input" className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                      Station Invite URL
+                    </label>
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        id="invite-link-input"
+                        type="text"
+                        readOnly
+                        value={inviteLink}
+                        title="Station invite link"
+                        className="flex-1 min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-600 bg-slate-50 focus:outline-none truncate"
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(inviteLink);
+                          setInviteCopied(true);
+                          setTimeout(() => setInviteCopied(false), 2000);
+                        }}
+                        className="shrink-0 bg-[#003366] hover:bg-[#002244] text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">{inviteCopied ? "check" : "content_copy"}</span>
+                        {inviteCopied ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+
+                    {/* Generate new link below */}
+                    <button
+                      onClick={() => {
+                        const rand = Math.random().toString(36).slice(2, 10);
+                        setInviteLink(`https://agas.ph/${rand}-fuel-station-registration`);
+                        setInviteCopied(false);
+                      }}
+                      className="bg-[#00796b] hover:bg-[#00695c] text-white text-sm font-bold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">refresh</span>
+                      Generate new link
+                    </button>
+                    <p className="text-xs text-slate-400 mt-2">
+                      Generating a new link makes the current link unusable.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
@@ -1179,17 +1205,26 @@ export default function AdminDashboard({ onLogout }) {
                       {sq ? `${stFiltered.length} result${stFiltered.length !== 1 ? "s" : ""} for "${stationSearch}"` : `${filteredStations.length} stations shown`}
                     </p>
                   </div>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
-                    <input type="text" placeholder="Search station, brand, barangay…" value={stationSearch}
-                      onChange={e => { setStationSearch(e.target.value); setStationPage(1); }}
-                      className="pl-8 pr-8 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#003366]/40 focus:ring-1 focus:ring-[#003366]/20 w-60" />
-                    {stationSearch && (
-                      <button onClick={() => { setStationSearch(""); setStationPage(1); }}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
-                        <span className="material-symbols-outlined text-[15px]">close</span>
-                      </button>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowInviteModal(true)}
+                      className="flex items-center gap-1.5 bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">send</span>
+                      Invite Stations
+                    </button>
+                    <div className="relative">
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
+                      <input type="text" placeholder="Search station, brand, barangay…" value={stationSearch}
+                        onChange={e => { setStationSearch(e.target.value); setStationPage(1); }}
+                        className="pl-8 pr-8 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#003366]/40 focus:ring-1 focus:ring-[#003366]/20 w-60" />
+                      {stationSearch && (
+                        <button onClick={() => { setStationSearch(""); setStationPage(1); }}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                          <span className="material-symbols-outlined text-[15px]">close</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <table className="w-full text-sm">

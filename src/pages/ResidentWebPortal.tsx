@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { QRCodeSVG } from "qrcode.react";
 import html2canvas from "html2canvas";
 import { encodeQR } from "../utils/qrCodec";
@@ -11,9 +11,6 @@ function formatTimestamp(iso: string) {
     hour: "2-digit", minute: "2-digit", hour12: true,
   });
 }
-
-mapboxgl.accessToken =
-  "pk.eyJ1IjoibWF0YWRldnMiLCJhIjoiY21mNmdhc3YyMGcxdzJrb21xZm80c3NpbCJ9.R0nU8Ip_9RCo-Q2aWxAbXA";
 
 const NAV_ITEMS = [
   { id: "overview",      icon: "dashboard",       label: "Overview"         },
