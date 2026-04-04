@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+// Fix Leaflet's broken default icon paths when bundled with Vite
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({ iconUrl: markerIcon, iconRetinaUrl: markerIcon2x, shadowUrl: markerShadow });
 import {
   WEEKLY_FUEL_LIMIT,
   assignStationUser,
@@ -1141,9 +1148,9 @@ export default function AdminDashboard({ onLogout }) {
     mapInst.current = map;
     map.invalidateSize();
 
-    // Add circle markers for each station (simulating heatmap dots)
+    // Add circle markers for each online station only
     const layerGroup = L.layerGroup();
-    const markers: L.CircleMarker[] = STATIONS.map((s) => {
+    const markers: L.CircleMarker[] = STATIONS.filter((s) => s.status === "Online").map((s) => {
       const prices: { label: string; price: number }[] = BRAND_PRICES[s.brand] ?? BRAND_PRICES.Other ?? [];
       const statusColor = s.status === "Online" ? "#2e7d32" : "#c62828";
       const statusBg    = s.status === "Online" ? "#e8f5e9"  : "#ffebee";
@@ -1172,12 +1179,13 @@ export default function AdminDashboard({ onLogout }) {
 
       // Scale radius by dispensed volume for a heatmap-like effect
       const radius = Math.max(8, Math.min(22, (s.dispensed / 5000) * 8 + 8));
+      const brandColor = (BRAND_COLORS[s.brand] ?? BRAND_COLORS.Other).dot;
       const circle = L.circleMarker([s.lat, s.lng], {
         radius,
         color: "#ffffff",
         weight: 2,
-        fillColor: "#003366",
-        fillOpacity: 0.82,
+        fillColor: brandColor,
+        fillOpacity: 0.9,
       }).bindPopup(popupHtml, { maxWidth: 260 });
 
       (circle as any)._stationBrand = s.brand;
@@ -1572,7 +1580,10 @@ export default function AdminDashboard({ onLogout }) {
                         className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${ck}`}
                       >
                         {b !== "All" && (
-                          <span className={`w-2 h-2 rounded-full inline-block ${active ? "bg-white" : `brand-dot-${brandKey(b)}`}`} />
+                          <span
+                            className="w-2 h-2 rounded-full inline-block shrink-0"
+                            style={{ background: active ? "#fff" : (BRAND_COLORS[b] ?? BRAND_COLORS.Other).dot }}
+                          />
                         )}
                         {b}
                       </button>
