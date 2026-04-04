@@ -92,6 +92,16 @@ export async function login({ email, password }: { email: string; password: stri
       vehicleType: data.vehicleType as string | undefined,
       gasType: data.gasType as string | undefined,
       registeredAt,
+      // Station profile (also stored on `accounts/{uid}` for officer portal)
+      officerFirstName: data.officerFirstName as string | undefined,
+      officerLastName: data.officerLastName as string | undefined,
+      stationCode: data.stationCode as string | undefined,
+      brand: data.brand as string | undefined,
+      fuelCapacities: data.fuelCapacities as Record<string, number> | undefined,
+      fuelPrices: data.fuelPrices as Record<string, number> | undefined,
+      fuelInventory: data.fuelInventory as Record<string, number> | undefined,
+      availableFuels: data.availableFuels as string[] | undefined,
+      capacity: data.capacity as string | number | undefined,
     };
 
     return { success: true, user, role };
