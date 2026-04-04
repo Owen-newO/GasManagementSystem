@@ -9,6 +9,44 @@ import {
   WEEKLY_FUEL_LIMIT,
 } from "@/lib/data/agas";
 
+type OfficerFuel = {
+  officerFirstName?: string;
+  firstName?: string;
+  brand?: string;
+  fuelPrices?: Record<string, number>;
+};
+
+/** Fallback ₱/L when station has not set a price for that product (aligned with Dashboard mock defaults). */
+const DEFAULT_FUEL_PRICES: Record<string, number> = {
+  Diesel: 68.25,
+  "Premium Diesel": 70.1,
+  "Regular/Unleaded (91)": 72.5,
+  "Premium (95)": 75.9,
+  "Super Premium (97)": 78.4,
+};
+
+function pricePerLiterFor(officer: OfficerFuel | undefined, fuelName: string): number {
+  const p = officer?.fuelPrices?.[fuelName];
+  if (typeof p === "number" && Number.isFinite(p) && p > 0) return p;
+  return DEFAULT_FUEL_PRICES[fuelName] ?? 72.5;
+}
+
+/** Pesos with centavos always shown (2 decimal places), for labels only. */
+function formatPeso(n: number): string {
+  return n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** For controlled `type="number"` cash field — no grouping so `parseFloat` stays correct. */
+function pesoInputString(n: number): string {
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
+
+/** Show liters derived from exact cash (avoid misleading 2dp when cash is the source of truth). */
+function formatLitersFromExactCash(liters: number): string {
+  const s = liters.toFixed(4);
+  return s.replace(/0+$/, "").replace(/\.$/, "") || "0";
+}
+
 type ValidationSuccessProps = {
   officer?: StationAccount | null;
   scannedResident?: DecodedQR | null;
@@ -59,6 +97,8 @@ export default function ValidationSuccess({
   const [loadingResident, setLoadingResident] = useState(false);
   const [lookupError, setLookupError] = useState("");
   const [literInput, setLiterInput] = useState("");
+  const [cashInput, setCashInput] = useState("");
+  const [inputMode, setInputMode] = useState<"liters" | "cash">("liters");
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [actionError, setActionError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -424,6 +464,82 @@ export default function ValidationSuccess({
                         );
                       })}
                     </div>
+                    <p className="text-[10px] text-slate-500 -mt-1">
+                      Max ₱{formatPeso(maxCashForAllocation)} · {remainingLiters.toFixed(1)} L allocation
+                    </p>
+
+                    {inputMode === "liters" ? (
+                      <div className="grid grid-cols-5 gap-2">
+                        {[2, 5, 10, 15, 20].map((amount) => {
+                          const exceeds = amount > remainingLiters;
+                          return (
+                            <button
+                              key={amount}
+                              type="button"
+                              disabled={exceeds}
+                              onClick={() => {
+                                if (exceeds) return;
+                                const Lc = Math.min(amount, remainingLiters);
+                                let cash = Math.round(Lc * pricePerLiter * 100) / 100;
+                                if (cash > maxCashForAllocation) {
+                                  cash = maxCashForAllocation;
+                                  setCashInput(pesoInputString(cash));
+                                  const L2 = Math.min(remainingLiters, cash / pricePerLiter);
+                                  setLiterInput(L2 > 0 ? formatLitersFromExactCash(L2) : "");
+                                } else {
+                                  setLiterInput(String(Lc));
+                                  setCashInput(pesoInputString(cash));
+                                }
+                                setActionError("");
+                              }}
+                              className={`rounded-lg border py-2.5 text-sm font-bold transition-all ${
+                                exceeds
+                                  ? "border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed"
+                                  : "border-outline-variant/40 bg-white text-[#003366] active:scale-95 hover:bg-slate-50"
+                              }`}
+                            >
+                              {amount} L
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2">
+                        {[50, 100, 500, 1000].map((peso) => {
+                          const exceeds = peso > maxCashForAllocation;
+                          const approxL = pricePerLiter > 0 ? peso / pricePerLiter : 0;
+                          return (
+                            <button
+                              key={peso}
+                              type="button"
+                              disabled={exceeds}
+                              onClick={() => {
+                                if (exceeds) return;
+                                setCashInput(pesoInputString(peso));
+                                const L =
+                                  pricePerLiter > 0
+                                    ? Math.min(remainingLiters, peso / pricePerLiter)
+                                    : 0;
+                                setLiterInput(L > 0 ? formatLitersFromExactCash(L) : "");
+                                setActionError("");
+                              }}
+                              className={`rounded-lg border py-2.5 px-1 text-xs sm:text-sm font-bold transition-all leading-tight ${
+                                exceeds
+                                  ? "border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed"
+                                  : "border-outline-variant/40 bg-white text-[#003366] active:scale-95 hover:bg-slate-50"
+                              }`}
+                            >
+                              <span className="block">₱{formatPeso(peso)}</span>
+                              {!exceeds && approxL > 0 && (
+                                <span className="block font-medium text-[9px] text-slate-500 mt-0.5">
+                                  ≈ {formatLitersFromExactCash(approxL)} L
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </>
                 )}
               </div>

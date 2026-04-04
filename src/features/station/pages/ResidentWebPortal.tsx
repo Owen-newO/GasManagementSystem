@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { QRCodeSVG } from "qrcode.react";
 import html2canvas from "html2canvas";
 import { subscribeResidentAllocationSummary, WEEKLY_FUEL_LIMIT } from "@/lib/data/agas";
@@ -157,7 +157,7 @@ const FUEL_BADGE: Record<string, string> = {
   Premium: "bg-green-100 text-green-700",
 };
 
-export default function ResidentWebPortal({ resident, onLogout }) {
+export default function ResidentWebPortal({ resident, onLogout, onChangePassword }) {
   const [activePage, setActivePage]     = useState("overview");
   const [collapsed, setCollapsed]       = useState(false);
   const [txFilter, setTxFilter]         = useState("All");
@@ -168,7 +168,7 @@ export default function ResidentWebPortal({ resident, onLogout }) {
   const [used, setUsed]                 = useState(0);
   const [remaining, setRemaining]       = useState(resident?.fuelAllocation ?? WEEKLY_FUEL_LIMIT);
   const mapRef                          = useRef<HTMLDivElement>(null);
-  const mapInst                         = useRef<mapboxgl.Map | null>(null);
+  const mapInst                         = useRef<L.Map | null>(null);
   const markerEls                       = useRef<Record<number, HTMLElement>>({});
   const stationListRef                  = useRef<HTMLDivElement>(null);
   const stationRowRefs                  = useRef<Record<number, HTMLElement | null>>({});
@@ -241,32 +241,38 @@ export default function ResidentWebPortal({ resident, onLogout }) {
     const el = mapRef.current;
     if (!el || mapInst.current) return;
 
-    const map = new mapboxgl.Map({
-      container: el,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [123.8950, 10.3200],
-      zoom: 11.5,
-      fadeDuration: 0,
-    });
+    const map = L.map(el, {
+      zoomControl: false,
+      preferCanvas: true,
+      fadeAnimation: true,
+      zoomAnimation: true,
+      markerZoomAnimation: false,
+    }).setView([10.3200, 123.8950], 11.5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      updateWhenIdle: false,
+      updateWhenZooming: false,
+      keepBuffer: 4,
+    }).addTo(map);
     mapInst.current = map;
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    map.invalidateSize();
 
-    map.on("load", () => {
-      ALL_STATIONS.forEach((st) => {
-        const markerEl = document.createElement("div");
-        markerEl.style.cssText =
-          "width:32px;height:32px;border-radius:50%;background:#003366;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;";
-        markerEl.innerHTML = `<span class="material-symbols-outlined" style="color:#f9c23c;font-size:16px;font-variation-settings:'FILL' 1">local_gas_station</span>`;
-        markerEl.addEventListener("click", () => {
-          setSelectedStation(st);
-          map.flyTo({ center: [st.lng, st.lat], zoom: 14, duration: 600 });
-        });
+    ALL_STATIONS.forEach((st) => {
+      const markerEl = document.createElement("div");
+      markerEl.style.cssText =
+        "width:32px;height:32px;border-radius:50%;background:#003366;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;";
+      markerEl.innerHTML = `<span class="material-symbols-outlined" style="color:#f9c23c;font-size:16px;font-variation-settings:'FILL' 1">local_gas_station</span>`;
 
-        markerEls.current[st.id] = markerEl;
+      const icon = L.divIcon({ html: markerEl.outerHTML, className: "", iconSize: [32, 32], iconAnchor: [16, 16] });
+      const marker = L.marker([st.lat, st.lng], { icon }).addTo(map);
 
-        new mapboxgl.Marker({ element: markerEl })
-          .setLngLat([st.lng, st.lat])
-          .addTo(map);
+      // Store the live DOM element reference after the marker is added to the map
+      markerEls.current[st.id] = marker.getElement() as HTMLElement;
+
+      marker.on("click", () => {
+        setSelectedStation(st);
+        map.flyTo([st.lat, st.lng], 14);
       });
     });
 
@@ -276,12 +282,14 @@ export default function ResidentWebPortal({ resident, onLogout }) {
   /* ── Sync marker colors + auto-scroll list when selectedStation changes ── */
   useEffect(() => {
     ALL_STATIONS.forEach((st) => {
-      const el = markerEls.current[st.id];
+      const wrapper = markerEls.current[st.id];
+      if (!wrapper) return;
+      const el = wrapper.querySelector("div") as HTMLElement | null;
       if (!el) return;
       const isActive = selectedStation?.id === st.id;
       el.style.background = isActive ? "#f9c23c" : "#003366";
-      const icon = el.querySelector("span");
-      if (icon) (icon as HTMLElement).style.color = isActive ? "#003366" : "#f9c23c";
+      const iconSpan = el.querySelector("span");
+      if (iconSpan) (iconSpan as HTMLElement).style.color = isActive ? "#003366" : "#f9c23c";
     });
 
     if (!selectedStation) return;
@@ -295,7 +303,9 @@ export default function ResidentWebPortal({ resident, onLogout }) {
   /* ── Filter map markers by brand ── */
   useEffect(() => {
     ALL_STATIONS.forEach((st) => {
-      const el = markerEls.current[st.id];
+      const wrapper = markerEls.current[st.id];
+      if (!wrapper) return;
+      const el = wrapper.querySelector("div") as HTMLElement | null;
       if (!el) return;
       el.style.display = (brandFilter === "All" || st.brand === brandFilter) ? "flex" : "none";
     });
@@ -419,8 +429,10 @@ export default function ResidentWebPortal({ resident, onLogout }) {
         {/* Collapse + Sign out */}
         <div className="border-t border-white/10 px-2 py-3 space-y-1">
           <button
+            type="button"
+            title={collapsed ? "Expand menu" : "Collapse menu"}
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/50 hover:bg-white/10 hover:text-white transition-all"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sky-200/90 hover:bg-white/10 hover:text-white transition-all"
           >
             <span className="material-symbols-outlined text-[20px] shrink-0">
               {collapsed ? "chevron_right" : "chevron_left"}
@@ -809,7 +821,7 @@ export default function ResidentWebPortal({ resident, onLogout }) {
                             type="button"
                             onClick={() => {
                               setSelectedStation(st);
-                              mapInst.current?.flyTo({ center: [st.lng, st.lat], zoom: 14, duration: 600 });
+                              mapInst.current?.flyTo([st.lat, st.lng], 14);
                             }}
                             className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 last:border-0 text-left ${
                               isSelected ? "bg-[#003366]" : "hover:bg-slate-50"
@@ -876,9 +888,10 @@ export default function ResidentWebPortal({ resident, onLogout }) {
               {/* Actions */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 {[
-                  { icon: "qr_code",      label: "View My QR Code",  action: () => setActivePage("qr-code"), color: "text-[#003366]" },
+                  { icon: "qr_code",      label: "View My QR Code",    action: () => setActivePage("qr-code"), color: "text-[#003366]" },
                   { icon: "receipt_long", label: "Transaction History", action: () => setActivePage("transactions"), color: "text-[#003366]" },
-                  { icon: "smartphone",   label: "Software Version",  action: null, note: "V 1.0.0", color: "text-[#003366]" },
+                  { icon: "lock_reset",   label: "Change Password",     action: onChangePassword, color: "text-[#003366]" },
+                  { icon: "smartphone",   label: "Software Version",    action: null, note: "V 1.0.0", color: "text-[#003366]" },
                 ].map((item, i, arr) => (
                   <button
                     key={item.label}

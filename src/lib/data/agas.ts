@@ -170,9 +170,10 @@ export interface PendingInviteResponse extends StationInviteRecord {
 
 export interface AssignStationUserInput {
   stationDirectoryId: string;
-  firstName: string;
-  lastName: string;
   email: string;
+  /** Optional; if omitted, names are derived from the email local part on the server. */
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface AssignedStationUserResult {
@@ -719,8 +720,8 @@ async function recoverAssignedStationUserResult(
       return {
         uid: invite.uid,
         email: invite.email,
-        firstName: invite.firstName ?? input.firstName,
-        lastName: invite.lastName ?? input.lastName,
+        firstName: invite.firstName ?? input.firstName ?? "",
+        lastName: invite.lastName ?? input.lastName ?? "",
         stationDirectoryId: invite.stationDirectoryId,
         stationSourceId: invite.stationSourceId ?? 0,
         stationName: invite.stationName,
@@ -733,8 +734,8 @@ async function recoverAssignedStationUserResult(
         isNewUser: false,
         pendingInvite: {
           ...invite,
-          firstName: invite.firstName ?? input.firstName,
-          lastName: invite.lastName ?? input.lastName,
+          firstName: invite.firstName ?? input.firstName ?? "",
+          lastName: invite.lastName ?? input.lastName ?? "",
           stationSourceId: invite.stationSourceId ?? 0,
           stationName: invite.stationName,
           brand: invite.brand ?? "",
@@ -1189,8 +1190,8 @@ export async function assignStationUser(
   const normalized: AssignedStationUserResult = {
     uid: result.uid,
     email: result.email,
-    firstName: typeof result.firstName === "string" ? result.firstName : input.firstName,
-    lastName: typeof result.lastName === "string" ? result.lastName : input.lastName,
+    firstName: typeof result.firstName === "string" ? result.firstName : (input.firstName ?? ""),
+    lastName: typeof result.lastName === "string" ? result.lastName : (input.lastName ?? ""),
     stationDirectoryId: result.stationDirectoryId,
     stationSourceId: typeof result.stationSourceId === "number" ? result.stationSourceId : 0,
     stationName: result.stationName,
@@ -1222,8 +1223,8 @@ export async function assignStationUser(
               id: result.uid,
               uid: result.uid,
               email: result.email,
-              firstName: typeof result.firstName === "string" ? result.firstName : input.firstName,
-              lastName: typeof result.lastName === "string" ? result.lastName : input.lastName,
+              firstName: typeof result.firstName === "string" ? result.firstName : (input.firstName ?? ""),
+              lastName: typeof result.lastName === "string" ? result.lastName : (input.lastName ?? ""),
               stationDirectoryId: result.stationDirectoryId,
               stationSourceId: typeof result.stationSourceId === "number" ? result.stationSourceId : 0,
               stationName: result.stationName,

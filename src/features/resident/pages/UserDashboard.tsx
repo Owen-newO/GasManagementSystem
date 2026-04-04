@@ -9,7 +9,6 @@ import {
   WEEKLY_FUEL_LIMIT,
 } from "@/lib/data/agas";
 
-mapboxgl.accessToken = "pk.eyJ1IjoibWF0YWRldnMiLCJhIjoiY21mNmdhc3YyMGcxdzJrb21xZm80c3NpbCJ9.R0nU8Ip_9RCo-Q2aWxAbXA";
 
 const DEFAULT_LAT = 10.3157;
 const DEFAULT_LON = 123.8854;
@@ -180,22 +179,31 @@ export default function UserDashboard({ resident, activeTab, onTabChange, onShow
       zoom: 13,
       interactive: false,
       attributionControl: false,
-      fadeDuration: 0,
-    });
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      touchZoom: false,
+      preferCanvas: true,
+      fadeAnimation: true,
+      zoomAnimation: true,
+      markerZoomAnimation: false,
+    }).setView([DEFAULT_LAT, DEFAULT_LON], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      updateWhenIdle: false,
+      updateWhenZooming: false,
+      keepBuffer: 4,
+    }).addTo(map);
 
     const markerEl = document.createElement("div");
     markerEl.style.cssText =
       "width:14px;height:14px;border-radius:50%;background:#003366;border:2px solid #fff;box-shadow:0 0 0 3px rgba(0,51,102,0.25)";
-    const marker = new mapboxgl.Marker({ element: markerEl })
-      .setLngLat([DEFAULT_LON, DEFAULT_LAT])
-      .addTo(map);
-
-    map.once("load", () => {
-      const container = mapPreviewRef.current;
-      if (!container) return;
-      (container.querySelector(".mapboxgl-ctrl-logo") as HTMLElement | null)?.style.setProperty("display", "none", "important");
-      (container.querySelector(".mapboxgl-ctrl-attrib") as HTMLElement | null)?.style.setProperty("display", "none", "important");
-    });
+    const markerIcon = L.divIcon({ html: markerEl.outerHTML, className: "", iconSize: [14, 14], iconAnchor: [7, 7] });
+    const marker = L.marker([DEFAULT_LAT, DEFAULT_LON], { icon: markerIcon }).addTo(map);
 
     mapInstanceRef.current = map;
 
@@ -203,8 +211,8 @@ export default function UserDashboard({ resident, activeTab, onTabChange, onShow
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude: lat, longitude: lon } = pos.coords;
-          map.setCenter([lon, lat]);
-          marker.setLngLat([lon, lat]);
+          map.setView([lat, lon], 13);
+          marker.setLatLng([lat, lon]);
         },
         () => undefined,
         { timeout: 5000, maximumAge: 60000 },
@@ -321,12 +329,12 @@ export default function UserDashboard({ resident, activeTab, onTabChange, onShow
             <button
               onClick={() => onTabChange("map")}
               aria-label="View full map"
-              className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-[#003366] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg active:scale-95 transition-all"
+              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 bg-[#003366] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg active:scale-95 transition-all"
             >
               <span className="material-symbols-outlined text-[14px]">open_in_full</span>
               View Full Map
             </button>
-            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-bold text-[#003366] shadow">
+            <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-bold text-[#003366] shadow">
               Nearby Stations
             </div>
           </section>
