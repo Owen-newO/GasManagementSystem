@@ -450,3 +450,4 @@ export default function UserDashboard({ resident, activeTab, onTabChange, onShow
     </div>
   );
 }
+
