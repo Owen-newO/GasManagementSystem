@@ -215,7 +215,7 @@ export default function App() {
   if (screen === "resident-web") {
     return (
       <RoleGuard requiredRole="resident" onDeny={() => setScreen("landing")}>
-        <ResidentWebPortal resident={resident} onLogout={handleLogout} />
+        <ResidentWebPortal resident={resident} onLogout={handleLogout} onChangePassword={() => setScreen("change-password")} />
       </RoleGuard>
     );
   }

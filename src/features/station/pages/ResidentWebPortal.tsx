@@ -108,7 +108,7 @@ const FUEL_BADGE: Record<string, string> = {
   Premium: "bg-green-100 text-green-700",
 };
 
-export default function ResidentWebPortal({ resident, onLogout }) {
+export default function ResidentWebPortal({ resident, onLogout, onChangePassword }) {
   const [activePage, setActivePage]     = useState("overview");
   const [collapsed, setCollapsed]       = useState(false);
   const [txFilter, setTxFilter]         = useState("All");
@@ -784,9 +784,10 @@ export default function ResidentWebPortal({ resident, onLogout }) {
               {/* Actions */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 {[
-                  { icon: "qr_code",      label: "View My QR Code",  action: () => setActivePage("qr-code"), color: "text-[#003366]" },
+                  { icon: "qr_code",      label: "View My QR Code",    action: () => setActivePage("qr-code"), color: "text-[#003366]" },
                   { icon: "receipt_long", label: "Transaction History", action: () => setActivePage("transactions"), color: "text-[#003366]" },
-                  { icon: "smartphone",   label: "Software Version",  action: null, note: "V 1.0.0", color: "text-[#003366]" },
+                  { icon: "lock_reset",   label: "Change Password",     action: onChangePassword, color: "text-[#003366]" },
+                  { icon: "smartphone",   label: "Software Version",    action: null, note: "V 1.0.0", color: "text-[#003366]" },
                 ].map((item, i, arr) => (
                   <button
                     key={item.label}
