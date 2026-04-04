@@ -1,82 +1,201 @@
-import { useState } from "react";
-import { formatDecodedDate } from "@/lib/qr/qrCodec";
+import { useEffect, useMemo, useState } from "react";
+import { formatDecodedDate, type DecodedQR } from "@/lib/qr/qrCodec";
 import BottomNav from "@/shared/components/navigation/BottomNav";
+import {
+  recordDispenseTransaction,
+  resolveResidentFromQR,
+  type ResolvedResidentScan,
+  type StationAccount,
+  WEEKLY_FUEL_LIMIT,
+} from "@/lib/data/agas";
 
 type ValidationSuccessProps = {
-  officer?: { officerFirstName?: string; firstName?: string; brand?: string };
-  scannedResident?: {
-    firstCode?: string;
-    lastCode?: string;
-    date?: Date | string;
-    gasType?: string;
-    serial?: string;
-  } | null;
+  officer?: StationAccount | null;
+  scannedResident?: DecodedQR | null;
   onBack: () => void;
+  onDispenseSuccess: () => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
 };
 
-export default function ValidationSuccess({ scannedResident, onBack, activeTab, onTabChange }: ValidationSuccessProps) {
-  const firstName = scannedResident?.firstCode || "JCX";
-  const lastName = scannedResident?.lastCode || "LEQ";
-  const plateNumber = "ABC-1234";
-  const vehicleType = "Motorcycle";
-  const registeredAt = scannedResident?.date
-    ? formatDecodedDate(new Date(scannedResident.date))
-    : null;
+function normalizeFuelType(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
 
-  const [fuelConsumed, setFuelConsumed] = useState(12);
-  const [fuelLimit] = useState(20);
+function getFuelOptions(officer: StationAccount | null | undefined, gasType: string | null | undefined): string[] {
+  const availableFuels = Array.isArray(officer?.availableFuels) && officer.availableFuels.length > 0
+    ? officer.availableFuels
+    : Object.keys(officer?.fuelPrices ?? {});
+
+  const wantsDiesel = normalizeFuelType(gasType).includes("diesel");
+  const filtered = availableFuels.filter((item) => {
+    const isDiesel = item.toLowerCase().includes("diesel");
+    return wantsDiesel ? isDiesel : !isDiesel;
+  });
+
+  return filtered.length > 0 ? filtered : availableFuels;
+}
+
+function fuelTypeTheme(fuelType: string) {
+  const normalized = fuelType.toLowerCase();
+  if (normalized.includes("diesel")) {
+    return { bgFrom: "#dcfce7", bgTo: "#bbf7d0", border: "#86efac", text: "#166534" };
+  }
+  if (normalized.includes("regular") || normalized.includes("unleaded")) {
+    return { bgFrom: "#fee2e2", bgTo: "#fecaca", border: "#fca5a5", text: "#991b1b" };
+  }
+  return { bgFrom: "#ffedd5", bgTo: "#fed7aa", border: "#fdba74", text: "#9a3412" };
+}
+
+export default function ValidationSuccess({
+  officer,
+  scannedResident,
+  onBack,
+  onDispenseSuccess,
+  activeTab,
+  onTabChange,
+}: ValidationSuccessProps) {
+  const [resolvedResident, setResolvedResident] = useState<ResolvedResidentScan | null>(null);
+  const [loadingResident, setLoadingResident] = useState(false);
+  const [lookupError, setLookupError] = useState("");
   const [literInput, setLiterInput] = useState("");
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [actionError, setActionError] = useState("");
-  const remainingLiters = Math.max(fuelLimit - fuelConsumed, 0);
-  const inputLiters = parseFloat(literInput);
-  const previewDeduct = !isNaN(inputLiters) && inputLiters > 0 ? inputLiters : 0;
-  const previewRemaining = Math.max(remainingLiters - previewDeduct, 0);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleConfirmDispense = () => {
+  useEffect(() => {
+    if (!scannedResident) {
+      setResolvedResident(null);
+      setLookupError("No QR payload was provided.");
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingResident(true);
+    setLookupError("");
+    setActionError("");
+
+    void resolveResidentFromQR(scannedResident)
+      .then((result) => {
+        if (cancelled) return;
+        if (!result) {
+          setResolvedResident(null);
+          setLookupError("Resident record was not found for this QR code.");
+          return;
+        }
+        setResolvedResident(result);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResolvedResident(null);
+          setLookupError("Could not validate this QR code against live resident data.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingResident(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scannedResident]);
+
+  const fuelOptionButtons = useMemo(
+    () => getFuelOptions(officer, resolvedResident?.resident.gasType ?? scannedResident?.gasType),
+    [officer, resolvedResident?.resident.gasType, scannedResident?.gasType],
+  );
+
+  const [selectedFuelOption, setSelectedFuelOption] = useState("");
+
+  useEffect(() => {
+    setSelectedFuelOption((current) => {
+      if (current && fuelOptionButtons.includes(current)) return current;
+      return fuelOptionButtons[0] ?? "";
+    });
+  }, [fuelOptionButtons]);
+
+  const resident = resolvedResident?.resident;
+  const firstName = resident?.firstName || scannedResident?.firstName || scannedResident?.firstCode || "Unknown";
+  const lastName = resident?.lastName || scannedResident?.lastName || scannedResident?.lastCode || "Resident";
+  const plateNumber = resident?.plate || scannedResident?.plate || "N/A";
+  const vehicleType = resident?.vehicleType || scannedResident?.vehicleType || "Vehicle";
+  const registeredAt = resident?.registeredAt
+    ? formatDecodedDate(new Date(resident.registeredAt))
+    : scannedResident?.registeredAt
+      ? formatDecodedDate(new Date(scannedResident.registeredAt))
+      : scannedResident?.date
+        ? formatDecodedDate(new Date(scannedResident.date))
+        : null;
+
+  const fuelConsumed = resolvedResident?.usedLiters ?? scannedResident?.fuelUsed ?? 0;
+  const fuelLimit = resident?.fuelAllocation ?? scannedResident?.fuelAllocation ?? WEEKLY_FUEL_LIMIT;
+  const hasAllocationSource =
+    resolvedResident?.remainingLiters != null ||
+    scannedResident?.fuelAllocation != null ||
+    scannedResident?.fuelUsed != null;
+  const remainingLiters = hasAllocationSource
+    ? Math.max(fuelLimit - fuelConsumed, 0)
+    : 0;
+  const inputLiters = parseFloat(literInput);
+  const previewDeduct = !Number.isNaN(inputLiters) && inputLiters > 0 ? inputLiters : 0;
+  const previewRemaining = Math.max(remainingLiters - previewDeduct, 0);
+  const selectedPrice = Number(officer?.fuelPrices?.[selectedFuelOption] ?? 0);
+  const selectedInventory = Number(officer?.fuelInventory?.[selectedFuelOption] ?? 0);
+  const selectedTheme = fuelTypeTheme(selectedFuelOption || resolvedResident?.resident.gasType || "Fuel");
+  const isLow = previewRemaining <= 7;
+  const circleColor = isLow ? "#dc2626" : "#16a34a";
+  const allocationBg = isLow ? "#fef2f2" : "#f0fdf4";
+  const allocationBorder = isLow ? "#fca5a5" : "#e5e5eb";
+  const textColor = isLow ? "#dc2626" : "#15803d";
+  const textMutedColor = isLow ? "#991b1b" : "#166534";
+  const barColor = isLow ? "#ef4444" : "#16a34a";
+
+  const handleConfirmDispense = async () => {
     const liters = parseFloat(literInput);
-    if (isNaN(liters) || liters <= 0) {
+    if (Number.isNaN(liters) || liters <= 0) {
       setActionError("Please enter liters before confirming dispense.");
       return;
     }
-    if (fuelConsumed + liters > fuelLimit) {
+
+    if (!resident?.uid || !officer?.uid) {
+      setActionError("Resident or station account data is missing.");
+      return;
+    }
+
+    if (liters > remainingLiters) {
       setShowLimitModal(true);
       return;
     }
-    setFuelConsumed((prev) => prev + liters);
+
+    if (liters > selectedInventory) {
+      setActionError("Station inventory is not enough for this request.");
+      return;
+    }
+
+    if (!selectedFuelOption) {
+      setActionError("Select a fuel type before confirming.");
+      return;
+    }
+
+    setSubmitting(true);
     setActionError("");
-    onBack();
+
+    try {
+      await recordDispenseTransaction({
+        stationUid: officer.uid,
+        residentUid: resident.uid,
+        liters,
+        fuelType: selectedFuelOption,
+      });
+      onDispenseSuccess();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to record this dispense transaction.");
+    } finally {
+      setSubmitting(false);
+    }
   };
-  const gasTypeFromQR = (scannedResident?.gasType ?? "").trim();
-  const isDieselType = gasTypeFromQR.toLowerCase().includes("diesel");
-  const fuelOptionButtons = isDieselType
-    ? ["Diesel", "Premium Diesel"]
-    : ["Regular/Unleaded (91)", "Premium (95)", "Super Premium (97)"];
-
-  const [selectedFuelOption, setSelectedFuelOption] = useState<string>(() => {
-    if (gasTypeFromQR && fuelOptionButtons.includes(gasTypeFromQR)) return gasTypeFromQR;
-    return fuelOptionButtons[0] || "";
-  });
-
-  const displayFuelType = selectedFuelOption.toLowerCase().includes("diesel")
-    ? "Diesel"
-    : "Gasoline";
-
-  const fuelTypeTheme = selectedFuelOption.toLowerCase().includes("diesel")
-    ? { bgFrom: "#dcfce7", bgTo: "#bbf7d0", border: "#86efac", text: "#166534" }
-    : selectedFuelOption.toLowerCase().includes("regular")
-      ? { bgFrom: "#fee2e2", bgTo: "#fecaca", border: "#fca5a5", text: "#991b1b" }
-      : { bgFrom: "#ffedd5", bgTo: "#fed7aa", border: "#fdba74", text: "#9a3412" };
-  const isLow = previewRemaining <= 7;
-  const circleColor    = isLow ? "#dc2626" : "#16a34a";
-  const allocationBg   = isLow ? "#fef2f2" : "#f0fdf4";
-  const allocationBorder = isLow ? "#fca5a5" : "#e5e5eb";
-  const textColor      = isLow ? "#dc2626" : "#15803d";
-  const textMutedColor = isLow ? "#991b1b" : "#166534";
-  const barColor       = isLow ? "#ef4444" : "#16a34a";
-
 
   return (
     <div className="flex flex-col min-h-dvh bg-surface relative">
@@ -87,11 +206,10 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
             "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h20v20H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20zm20-20h20v20H20V0z' fill='%23003366' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E\")",
         }}
       >
-        <div className=" bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
-          {/* Status Header */}
-          <div className="p-5 text-center relative"
-            style={{ background: "linear-gradient(135deg, #003366 0%, #001e40 100%)" }}>
-            <div className="absolute inset-0 opacity-10"
+        <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+          <div className="p-5 text-center relative" style={{ background: "linear-gradient(135deg, #003366 0%, #001e40 100%)" }}>
+            <div
+              className="absolute inset-0 opacity-10"
               style={{
                 backgroundImage:
                   "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h20v20H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20zm20-20h20v20H20V0z' fill='%23003366' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E\")",
@@ -99,8 +217,7 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
             />
             <div className="relative z-10 flex flex-col items-center">
               <div className="w-14 h-14 bg-[#2e7d32] rounded-full flex items-center justify-center mb-3 shadow-xl">
-                <span className="material-symbols-outlined text-3xl text-white"
-                  style={{ fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined text-3xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
                   check_circle
                 </span>
               </div>
@@ -110,7 +227,16 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
           </div>
 
           <div className="p-6 space-y-4">
-            {/* Resident Identity */}
+            {(loadingResident || lookupError) && (
+              <div className={`rounded-xl border px-4 py-3 text-sm ${
+                loadingResident
+                  ? "bg-slate-50 border-slate-200 text-slate-500"
+                  : "bg-red-50 border-red-200 text-red-700"
+              }`}>
+                {loadingResident ? "Loading live resident data..." : lookupError}
+              </div>
+            )}
+
             <div className="bg-surface-container-low rounded-xl p-4 space-y-3">
               <p className="text-outline text-xs font-bold tracking-widest uppercase text-center">Verified Resident</p>
               <div className="grid grid-cols-2 gap-2">
@@ -129,23 +255,23 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
                 <p className="text-outline text-xs font-bold uppercase tracking-wider mt-2">Vehicle Type</p>
                 <p className="font-headline font-bold text-xl text-on-surface">{vehicleType}</p>
               </div>
-              {displayFuelType && (
+              {selectedFuelOption && (
                 <div
-                  className="mx-auto w-full max-w-[240px] rounded-full border px-4 py-2 flex items-center justify-center gap-2 shadow-sm"
+                  className="mx-auto w-full max-w-[260px] rounded-full border px-4 py-2 flex items-center justify-center gap-2 shadow-sm"
                   style={{
-                    backgroundImage: `linear-gradient(to right, ${fuelTypeTheme.bgFrom}, ${fuelTypeTheme.bgTo})`,
-                    borderColor: fuelTypeTheme.border,
+                    backgroundImage: `linear-gradient(to right, ${selectedTheme.bgFrom}, ${selectedTheme.bgTo})`,
+                    borderColor: selectedTheme.border,
                   }}
                 >
                   <span
                     className="material-symbols-outlined"
-                    style={{ color: fuelTypeTheme.text, fontSize: "18px", fontVariationSettings: "'FILL' 1" }}
+                    style={{ color: selectedTheme.text, fontSize: "18px", fontVariationSettings: "'FILL' 1" }}
                   >
                     local_gas_station
                   </span>
                   <div className="text-center">
-                    <p className="text-[11px] font-bold uppercase tracking-wider leading-none" style={{ color: fuelTypeTheme.text }}>Fuel Type</p>
-                    <p className="text-lg font-black leading-tight" style={{ color: fuelTypeTheme.text }}>{displayFuelType}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider leading-none" style={{ color: selectedTheme.text }}>Dispense Fuel</p>
+                    <p className="text-lg font-black leading-tight" style={{ color: selectedTheme.text }}>{selectedFuelOption}</p>
                   </div>
                 </div>
               )}
@@ -154,12 +280,8 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
               )}
             </div>
 
-            {/* Transaction Details */}
             <div className="space-y-4">
-              <div
-                className="rounded-2xl p-3 sm:p-4 border overflow-hidden"
-                style={{ background: allocationBg, borderColor: allocationBorder }}
-              >
+              <div className="rounded-2xl p-3 sm:p-4 border overflow-hidden" style={{ background: allocationBg, borderColor: allocationBorder }}>
                 <div className="flex items-start justify-between gap-2 sm:gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider" style={{ color: textMutedColor }}>Fuel Allocation</p>
@@ -176,22 +298,22 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
                   </div>
                   {(() => {
                     const pct = Math.round((previewRemaining / fuelLimit) * 100);
-                    const r = 22;
-                    const circ = 2 * Math.PI * r;
-                    const dash = (pct / 100) * circ;
+                    const radius = 22;
+                    const circumference = 2 * Math.PI * radius;
+                    const dash = (pct / 100) * circumference;
                     return (
                       <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
                         <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90 absolute inset-0">
-                          {/* Track */}
-                          <circle cx="32" cy="32" r={r} fill="none" stroke={allocationBorder} strokeWidth="5" />
-                          {/* Arc */}
+                          <circle cx="32" cy="32" r={radius} fill="none" stroke={allocationBorder} strokeWidth="5" />
                           <circle
-                            cx="32" cy="32" r={r}
+                            cx="32"
+                            cy="32"
+                            r={radius}
                             fill="none"
                             stroke={circleColor}
                             strokeWidth="5"
                             strokeLinecap="round"
-                            strokeDasharray={`${dash} ${circ}`}
+                            strokeDasharray={`${dash} ${circumference}`}
                           />
                         </svg>
                         <div className="relative flex flex-col items-center leading-none">
@@ -208,19 +330,17 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
                     className="h-full rounded-full flex items-center justify-end pr-2"
                     style={{ backgroundColor: barColor, width: `${Math.min((fuelConsumed / fuelLimit) * 100, 100)}%` }}
                   >
-                    <span className="text-[8px] sm:text-[9px] font-black text-white whitespace-nowrap">{fuelConsumed}L used</span>
+                    <span className="text-[8px] sm:text-[9px] font-black text-white whitespace-nowrap">{fuelConsumed.toFixed(1)}L used</span>
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-end text-base sm:text-2xl font-bold" style={{ color: textColor }}>
-
                   <span className="text-right">Total: {fuelLimit} L / week</span>
                 </div>
               </div>
 
-              {/* Liter Input */}
               <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-3">
-                <label className="text-outline text-[12px] font-bold uppercase tracking-wider">Input Liter</label>  
-                <div className={`grid gap-2 ${isDieselType ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+                <label className="text-outline text-[12px] font-bold uppercase tracking-wider">Input Liter</label>
+                <div className={`grid gap-2 ${fuelOptionButtons.length <= 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
                   {fuelOptionButtons.map((option) => {
                     const active = selectedFuelOption === option;
                     return (
@@ -242,39 +362,57 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
                     );
                   })}
                 </div>
+
+                {selectedFuelOption && (
+                  <div className="grid grid-cols-2 gap-3 rounded-xl bg-white p-3 border border-outline-variant/20">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Price / Liter</p>
+                      <p className="text-lg font-black text-[#003366]">₱{selectedPrice.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Station Stock</p>
+                      <p className="text-lg font-black text-[#003366]">{selectedInventory.toFixed(1)} L</p>
+                    </div>
+                  </div>
+                )}
+
                 {remainingLiters <= 0 ? (
                   <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold px-4 py-3 text-center">
-                    No allocation remaining — this resident has used their full weekly limit.
+                    No allocation remaining. This resident has used the full weekly limit.
                   </div>
                 ) : (
                   <>
                     <input
                       type="number"
                       min="0"
-                      max={remainingLiters}
+                      max={Math.min(remainingLiters, selectedInventory)}
                       step="0.1"
                       value={literInput}
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (!isNaN(val) && val > remainingLiters) {
-                          setLiterInput(String(remainingLiters));
+                        const value = parseFloat(e.target.value);
+                        const maxValue = Math.min(remainingLiters, selectedInventory || remainingLiters);
+                        if (!Number.isNaN(value) && value > maxValue) {
+                          setLiterInput(String(maxValue));
                         } else {
                           setLiterInput(e.target.value);
                         }
                         setActionError("");
                       }}
-                      placeholder={`Max ${remainingLiters.toFixed(1)} L`}
+                      placeholder={`Max ${Math.min(remainingLiters, selectedInventory || remainingLiters).toFixed(1)} L`}
                       className="w-full rounded-lg border border-outline-variant/30 px-4 py-3 text-on-surface bg-white outline-none focus:border-[#003366]"
                     />
                     <div className="grid grid-cols-5 gap-2">
                       {[2, 5, 10, 15, 20].map((amount) => {
-                        const exceeds = amount > remainingLiters;
+                        const exceeds = amount > remainingLiters || amount > selectedInventory;
                         return (
                           <button
                             key={amount}
                             type="button"
                             disabled={exceeds}
-                            onClick={() => { setLiterInput(String(amount)); setActionError(""); }}
+                            onClick={() => {
+                              setLiterInput(String(amount));
+                              setActionError("");
+                            }}
                             className={`rounded-lg border py-2.5 text-sm font-bold transition-all ${
                               exceeds
                                 ? "border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed"
@@ -291,12 +429,10 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
               </div>
             </div>
 
-            {/* Info Banner */}
             <div className="bg-tertiary-fixed/30 border-l-4 border-tertiary p-4 rounded-r-lg flex gap-3">
               <span className="material-symbols-outlined text-tertiary shrink-0">info</span>
               <p className="text-sm text-on-tertiary-fixed-variant leading-tight">
-                Allocation is valid for immediate dispensing at the designated pump station.
-                Please ensure fuel nozzle is securely attached.
+                This dispense is recorded against live resident allocation and live station inventory.
               </p>
             </div>
 
@@ -306,19 +442,30 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex flex-col gap-3 pt-2">
               <button
-                onClick={handleConfirmDispense}
-                disabled={remainingLiters <= 0 || !literInput || parseFloat(literInput) <= 0}
+                onClick={() => void handleConfirmDispense()}
+                disabled={
+                  loadingResident ||
+                  submitting ||
+                  !resident?.uid ||
+                  remainingLiters <= 0 ||
+                  !literInput ||
+                  parseFloat(literInput) <= 0
+                }
                 className={`w-full font-headline font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${
-                  remainingLiters > 0 && literInput && parseFloat(literInput) > 0
+                  !loadingResident &&
+                  !submitting &&
+                  resident?.uid &&
+                  remainingLiters > 0 &&
+                  literInput &&
+                  parseFloat(literInput) > 0
                     ? "bg-[#2e7d32] text-white active:scale-95 active:bg-[#1b5e20]"
                     : "bg-slate-200 text-slate-400 cursor-not-allowed"
                 }`}
               >
                 <span className="material-symbols-outlined">gas_meter</span>
-                Confirm Dispense
+                {submitting ? "Recording Dispense..." : "Confirm Dispense"}
               </button>
               <button
                 onClick={onBack}
@@ -332,20 +479,18 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
 
         <div className="mt-8 text-center text-outline text-xs space-y-1 pb-4">
           <p>© 2024 Mata Technologies Inc.</p>
-          <p>Ref ID: VAL-9823-CEB-2024</p>
+          <p>Ref ID: {scannedResident?.serial ?? "N/A"}</p>
         </div>
       </main>
 
       <BottomNav active={activeTab} onChange={onTabChange} />
 
-      {/* Fuel Limit Modal */}
       {showLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex flex-col items-center text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                <span className="material-symbols-outlined text-red-600"
-                  style={{ fontSize: "32px", fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined text-red-600" style={{ fontSize: "32px", fontVariationSettings: "'FILL' 1" }}>
                   warning
                 </span>
               </div>
@@ -354,7 +499,7 @@ export default function ValidationSuccess({ scannedResident, onBack, activeTab, 
                 This fuel request exceeds the allowed limit for this resident.
               </p>
               <div className="mt-4 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
-                <p><span className="font-semibold">Consumed:</span> {fuelConsumed}L</p>
+                <p><span className="font-semibold">Consumed:</span> {fuelConsumed.toFixed(1)}L</p>
                 <p><span className="font-semibold">Limit:</span> {fuelLimit}L</p>
               </div>
               <button

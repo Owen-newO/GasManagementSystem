@@ -1,6 +1,11 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/app/providers/AuthContext";
-import { acceptPendingStationAssignment } from "@/lib/data/agas";
+import {
+  acceptPendingStationAssignment,
+  fetchResidentAccount,
+  fetchStationAccount,
+  saveStationFuelSettings,
+} from "@/lib/data/agas";
 import ChangePassword from "@/features/account/pages/ChangePassword";
 import Settings from "@/features/account/pages/Settings";
 import AdminDashboard from "@/features/admin/pages/AdminDashboard";
@@ -47,6 +52,27 @@ export default function App() {
   const [scannedResident, setScannedResident] = useState(null);
   const [oobCode, setOobCode] = useState<string | null>(null);
 
+  const refreshPortalUser = useCallback(async () => {
+    const uid = typeof auth.user?.uid === "string" ? auth.user.uid : "";
+    if (!uid) return;
+
+    if (auth.role === "station") {
+      const nextOfficer = await fetchStationAccount(uid);
+      if (nextOfficer) {
+        setOfficer(nextOfficer);
+        setLastUpdated(nextOfficer.updatedAt ? new Date(nextOfficer.updatedAt) : null);
+      }
+      return;
+    }
+
+    if (auth.role === "resident") {
+      const nextResident = await fetchResidentAccount(uid);
+      if (nextResident) {
+        setResident(nextResident);
+      }
+    }
+  }, [auth.role, auth.user]);
+
   // Once auth state is restored, route to the correct portal
   useEffect(() => {
     if (loading) return;
@@ -88,6 +114,14 @@ export default function App() {
   }, [loading, auth.isAuthenticated, auth.role, auth.user]);
 
   useEffect(() => {
+    if (loading || !auth.isAuthenticated || !auth.role || typeof auth.user?.uid !== "string") {
+      return;
+    }
+
+    void refreshPortalUser().catch(() => undefined);
+  }, [auth.isAuthenticated, auth.role, auth.user, loading, refreshPortalUser]);
+
+  useEffect(() => {
     if (loading || !auth.isAuthenticated || auth.role !== "station") return;
     const uid = typeof auth.user?.uid === "string" ? auth.user.uid : "";
     const assignmentStatus =
@@ -97,13 +131,13 @@ export default function App() {
     let cancelled = false;
     void acceptPendingStationAssignment(uid).then((accepted) => {
       if (!accepted || cancelled) return;
-      setOfficer((prev) => (prev ? { ...prev, assignmentStatus: "active" } : prev));
+      void refreshPortalUser().catch(() => undefined);
     }).catch(() => undefined);
 
     return () => {
       cancelled = true;
     };
-  }, [loading, auth.isAuthenticated, auth.role, auth.user]);
+  }, [loading, auth.isAuthenticated, auth.role, auth.user, refreshPortalUser]);
 
   // ─── Tab navigation ────────────────────────────────────────────────────────
   const handleOfficerTabChange = (tab) => {
@@ -162,6 +196,12 @@ export default function App() {
     setScreen("validation");
   };
   const handleValidationBack = () => {
+    setScreen("dashboard");
+    setActiveTab("dashboard");
+  };
+  const handleDispenseSuccess = async () => {
+    await refreshPortalUser();
+    setLastUpdated(new Date());
     setScreen("dashboard");
     setActiveTab("dashboard");
   };
@@ -268,6 +308,7 @@ export default function App() {
           officer={officer}
           scannedResident={scannedResident}
           onBack={handleValidationBack}
+          onDispenseSuccess={() => void handleDispenseSuccess()}
           activeTab={activeTab}
           onTabChange={handleOfficerTabChange}
         />
@@ -379,19 +420,14 @@ export default function App() {
             setScreen("dashboard");
             setActiveTab("dashboard");
           }}
-          onSave={(payload) => {
-            setOfficer((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    fuelInventory: payload.fuelInventory,
-                    fuelCapacities: payload.fuelCapacities,
-                    fuelPrices: payload.fuelPrices,
-                    availableFuels: Object.keys(payload.fuelInventory),
-                  }
-                : prev
-            );
-            setLastUpdated(new Date());
+          onSave={async (payload) => {
+            if (typeof officer?.uid === "string") {
+              const nextOfficer = await saveStationFuelSettings(officer.uid, payload);
+              if (nextOfficer) {
+                setOfficer(nextOfficer);
+                setLastUpdated(nextOfficer.updatedAt ? new Date(nextOfficer.updatedAt) : new Date());
+              }
+            }
             setScreen("dashboard");
             setActiveTab("dashboard");
           }}

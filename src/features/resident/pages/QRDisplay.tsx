@@ -14,11 +14,11 @@ function formatTimestamp(iso: string) {
 }
 
 export default function QRDisplay({ resident, onDone }) {
-  const { firstName, lastName, plate, barangay, vehicleType, gasType, registeredAt } = resident;
+  const { uid, firstName, lastName, plate, barangay, vehicleType, gasType, registeredAt, fuelAllocation, fuelUsed } = resident;
   const fullName = `${firstName} ${lastName}`;
 
-  // New encoded format: JOHSMI46111.8560
-  const qrData = encodeQR(firstName, lastName, registeredAt, gasType);
+  // QR payload now stores the resident UID so scan fetches the live resident record.
+  const qrData = encodeQR(firstName, lastName, registeredAt, gasType, uid, plate, vehicleType, barangay, fuelAllocation, fuelUsed);
 
   const svgRef = useRef(null);
 

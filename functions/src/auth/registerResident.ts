@@ -133,6 +133,8 @@ export const registerResident = onRequest(
           barangay: data.barangay,
           email: normalizedEmail,
           role: "resident",
+          fuelAllocation: 20,
+          fuelUsed: 0,
           registeredAt: FieldValue.serverTimestamp(),
         });
       } catch (err: unknown) {

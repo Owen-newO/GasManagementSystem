@@ -10,9 +10,11 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import type { AuthUser } from "@/lib/auth/authService";
 import { auth, db } from "@/lib/firebase/client";
+import type { DecodedQR } from "@/lib/qr/qrCodec";
 
 export const WEEKLY_FUEL_LIMIT = 20;
 
@@ -25,6 +27,9 @@ export interface ResidentAccount extends AuthUser {
   barangay?: string;
   vehicleType?: string;
   gasType?: string;
+  fuelAllocation?: number;
+  fuelUsed?: number;
+  fuelWeekKey?: string;
   registeredAt?: string;
   updatedAt?: string;
   status?: string;
@@ -35,6 +40,7 @@ export interface StationAccount extends AuthUser {
   role: "station";
   brand?: string;
   barangay?: string;
+  capacity?: string | number;
   stationDirectoryId?: string;
   stationSourceId?: number;
   stationCode?: string;
@@ -68,6 +74,7 @@ export interface DispenseTransaction {
   id: string;
   residentUid: string;
   stationUid: string;
+  stationId: string;
   residentName: string;
   stationName: string;
   stationBrand: string;
@@ -78,7 +85,9 @@ export interface DispenseTransaction {
   liters: number;
   fuelType: string;
   pricePerLiter: number;
+  amount: number;
   totalPaid: number;
+  occurredAt: Date | null;
   createdAt: Date | null;
   weekKey: string;
   status: string;
@@ -181,6 +190,37 @@ export interface AssignedStationUserResult {
   inviteDeliveryMethod: string;
   isNewUser: boolean;
   pendingInvite?: PendingInviteResponse | null;
+}
+
+export interface ResidentAllocationSummary {
+  transactions: DispenseTransaction[];
+  usedLiters: number;
+  remainingLiters: number;
+}
+
+export interface ResolvedResidentScan extends ResidentAllocationSummary {
+  resident: ResidentAccount;
+}
+
+export interface SaveStationFuelSettingsInput {
+  fuelInventory: Record<string, number>;
+  fuelCapacities: Record<string, number>;
+  fuelPrices: Record<string, number>;
+}
+
+export interface RecordDispenseTransactionInput {
+  stationUid: string;
+  residentUid: string;
+  liters: number;
+  fuelType: string;
+}
+
+export interface RecordDispenseTransactionResult {
+  transaction: DispenseTransaction;
+  resident: ResidentAccount;
+  station: StationAccount;
+  usedLiters: number;
+  remainingLiters: number;
 }
 
 type AccountRecord = ResidentAccount | StationAccount | AdminAccount;
@@ -333,6 +373,9 @@ function mapAccount(uid: string, data: Record<string, unknown>): AccountRecord |
       barangay: typeof data.barangay === "string" ? data.barangay : undefined,
       vehicleType: typeof data.vehicleType === "string" ? data.vehicleType : undefined,
       gasType: typeof data.gasType === "string" ? data.gasType : undefined,
+      fuelAllocation: asNumber(data.fuelAllocation) ?? WEEKLY_FUEL_LIMIT,
+      fuelUsed: asNumber(data.fuelUsed) ?? 0,
+      fuelWeekKey: asString(data.fuelWeekKey),
       status: typeof data.status === "string" ? data.status : undefined,
     };
   }
@@ -343,6 +386,7 @@ function mapAccount(uid: string, data: Record<string, unknown>): AccountRecord |
       role,
       brand: typeof data.brand === "string" ? data.brand : undefined,
       barangay: typeof data.barangay === "string" ? data.barangay : undefined,
+      capacity: asNumber(data.capacity),
       stationDirectoryId: typeof data.stationDirectoryId === "string" ? data.stationDirectoryId : undefined,
       stationSourceId: asNumber(data.stationSourceId),
       stationCode: typeof data.stationCode === "string" ? data.stationCode : undefined,
@@ -369,10 +413,13 @@ function mapAccount(uid: string, data: Record<string, unknown>): AccountRecord |
 }
 
 function mapTransaction(id: string, data: Record<string, unknown>): DispenseTransaction {
+  const occurredAt = toDate(data.occurredAt) ?? toDate(data.createdAt);
+  const amount = asNumber(data.amount) ?? asNumber(data.totalPaid) ?? 0;
   return {
     id,
     residentUid: typeof data.residentUid === "string" ? data.residentUid : "",
     stationUid: typeof data.stationUid === "string" ? data.stationUid : "",
+    stationId: typeof data.stationId === "string" ? data.stationId : "",
     residentName: typeof data.residentName === "string" ? data.residentName : "",
     stationName: typeof data.stationName === "string" ? data.stationName : "",
     stationBrand: typeof data.stationBrand === "string" ? data.stationBrand : "",
@@ -383,8 +430,10 @@ function mapTransaction(id: string, data: Record<string, unknown>): DispenseTran
     liters: asNumber(data.liters) ?? 0,
     fuelType: typeof data.fuelType === "string" ? data.fuelType : "",
     pricePerLiter: asNumber(data.pricePerLiter) ?? 0,
-    totalPaid: asNumber(data.totalPaid) ?? 0,
-    createdAt: toDate(data.createdAt),
+    amount,
+    totalPaid: amount,
+    occurredAt,
+    createdAt: occurredAt,
     weekKey: typeof data.weekKey === "string" ? data.weekKey : "",
     status: typeof data.status === "string" ? data.status : "dispensed",
   };
@@ -480,7 +529,10 @@ export function getWeekKey(date = new Date()): string {
   const day = (start.getDay() + 6) % 7;
   start.setHours(0, 0, 0, 0);
   start.setDate(start.getDate() - day);
-  return start.toISOString().slice(0, 10);
+  const year = start.getFullYear();
+  const month = String(start.getMonth() + 1).padStart(2, "0");
+  const dayOfMonth = String(start.getDate()).padStart(2, "0");
+  return `${year}-${month}-${dayOfMonth}`;
 }
 
 export function getAccountDisplayName(
@@ -499,6 +551,7 @@ export function getAccountDisplayName(
 }
 
 const STATION_ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+const QR_EXCEL_EPOCH = new Date(1899, 11, 30).getTime();
 
 export function isStationUserOnline(account: Partial<StationAccount>): boolean {
   if (account.role !== "station") return false;
@@ -522,6 +575,93 @@ function sortTransactions(items: DispenseTransaction[]): DispenseTransaction[] {
 
 function sortAccounts<T extends AccountRecord>(items: T[]): T[] {
   return [...items].sort((a, b) => getAccountDisplayName(a).localeCompare(getAccountDisplayName(b)));
+}
+
+function getQrNamePart(value: string | undefined): string {
+  return (value ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .slice(0, 3)
+    .padEnd(3, "X");
+}
+
+function getQrSerial(value: unknown): string | null {
+  const date = toDate(value);
+  if (!date) return null;
+
+  const serial = (date.getTime() - QR_EXCEL_EPOCH) / 86400000;
+  return Number.isFinite(serial) ? serial.toFixed(4) : null;
+}
+
+function normalizeFuelType(value: string | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function getResidentFuelAllocation(account: ResidentAccount | null | undefined): number {
+  return asNumber(account?.fuelAllocation) ?? WEEKLY_FUEL_LIMIT;
+}
+
+function getResidentFuelWeekKey(account: ResidentAccount | null | undefined): string | undefined {
+  return asString(account?.fuelWeekKey);
+}
+
+function getResidentFuelUsed(
+  account: ResidentAccount | null | undefined,
+  weekKey = getWeekKey(),
+): number {
+  const storedFuelUsed = asNumber(account?.fuelUsed) ?? 0;
+  const storedWeekKey = getResidentFuelWeekKey(account);
+  return storedWeekKey === weekKey ? storedFuelUsed : 0;
+}
+
+function getTransactionWeekKey(transaction: DispenseTransaction): string {
+  if (transaction.weekKey) return transaction.weekKey;
+  return transaction.occurredAt ? getWeekKey(transaction.occurredAt) : "";
+}
+
+function getWeeklyTransactionLiters(
+  transactions: DispenseTransaction[],
+  weekKey = getWeekKey(),
+): number {
+  return Math.round(
+    transactions
+      .filter((transaction) => getTransactionWeekKey(transaction) === weekKey)
+      .reduce((sum, transaction) => sum + transaction.liters, 0) * 100,
+  ) / 100;
+}
+
+function buildResidentAllocationSummary(
+  resident: ResidentAccount | null | undefined,
+  transactions: DispenseTransaction[],
+): ResidentAllocationSummary {
+  const currentWeekKey = getWeekKey();
+  const usedLiters = Math.max(
+    getResidentFuelUsed(resident, currentWeekKey),
+    getWeeklyTransactionLiters(transactions, currentWeekKey),
+  );
+  const fuelAllocation = getResidentFuelAllocation(resident);
+  return {
+    transactions,
+    usedLiters,
+    remainingLiters: Math.max(fuelAllocation - usedLiters, 0),
+  };
+}
+
+async function fetchTransactionsByField(
+  field: "residentUid" | "stationUid",
+  uid: string,
+): Promise<DispenseTransaction[]> {
+  if (!uid) return [];
+
+  const snapshot = await getDocs(query(
+    collection(db, "transactions"),
+    where(field, "==", uid),
+    limit(500),
+  ));
+
+  return sortTransactions(
+    snapshot.docs.map((item) => mapTransaction(item.id, item.data() as Record<string, unknown>)),
+  );
 }
 
 async function recoverAssignedStationUserResult(
@@ -644,12 +784,261 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
   return { residents, stations, admins, transactions, stationDirectory, stationInvites };
 }
 
+export async function fetchAccountByUid(uid: string): Promise<AccountRecord | null> {
+  if (!uid) return null;
+
+  const snapshot = await getDoc(doc(db, "accounts", uid));
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return mapAccount(snapshot.id, snapshot.data() as Record<string, unknown>);
+}
+
+export async function fetchResidentAccount(uid: string): Promise<ResidentAccount | null> {
+  const account = await fetchAccountByUid(uid);
+  return account?.role === "resident" ? account : null;
+}
+
+export async function fetchStationAccount(uid: string): Promise<StationAccount | null> {
+  const account = await fetchAccountByUid(uid);
+  return account?.role === "station" ? account : null;
+}
+
 export async function fetchStationDirectory(): Promise<StationDirectoryRecord[]> {
   const snapshot = await getDocs(collection(db, "stationDirectory"));
   return snapshot.docs
     .map((item) => mapStationDirectoryRecord(item.id, item.data() as Record<string, unknown>))
     .filter((item): item is StationDirectoryRecord => item != null)
     .sort((a, b) => a.sourceId - b.sourceId);
+}
+
+export async function fetchResidentTransactions(uid: string): Promise<DispenseTransaction[]> {
+  return fetchTransactionsByField("residentUid", uid);
+}
+
+export async function fetchStationTransactions(uid: string): Promise<DispenseTransaction[]> {
+  return fetchTransactionsByField("stationUid", uid);
+}
+
+export async function fetchResidentAllocationSummary(uid: string): Promise<ResidentAllocationSummary> {
+  const resident = await fetchResidentAccount(uid);
+  let transactions: DispenseTransaction[] = [];
+
+  try {
+    transactions = await fetchResidentTransactions(uid);
+  } catch {
+    transactions = [];
+  }
+
+  return buildResidentAllocationSummary(resident, transactions);
+}
+
+export async function resolveResidentFromQR(decoded: DecodedQR): Promise<ResolvedResidentScan | null> {
+  if (decoded.uid) {
+    const resident = await fetchResidentAccount(decoded.uid);
+    if (resident) {
+      const allocation = buildResidentAllocationSummary(resident, []);
+      return {
+        resident,
+        transactions: allocation.transactions,
+        usedLiters: allocation.usedLiters,
+        remainingLiters: allocation.remainingLiters,
+      };
+    }
+  }
+
+  const residentsSnapshot = await getDocs(query(
+    collection(db, "accounts"),
+    where("role", "==", "resident"),
+    limit(500),
+  ));
+
+  const candidates = residentsSnapshot.docs
+    .map((item) => mapAccount(item.id, item.data() as Record<string, unknown>))
+    .filter((item): item is ResidentAccount => item?.role === "resident");
+
+  const matchingResidents = candidates.filter((item) => {
+    const firstCodeMatches = getQrNamePart(item.firstName) === decoded.firstCode;
+    const lastCodeMatches = getQrNamePart(item.lastName) === decoded.lastCode;
+    const gasTypeMatches =
+      !decoded.gasType ||
+      !item.gasType ||
+      normalizeFuelType(item.gasType) === normalizeFuelType(decoded.gasType);
+
+    return firstCodeMatches && lastCodeMatches && gasTypeMatches;
+  });
+
+  const resident =
+    matchingResidents.find((item) => getQrSerial(item.registeredAt) === decoded.serial) ??
+    (decoded.plate
+      ? matchingResidents.find((item) => item.plate?.trim().toUpperCase() === decoded.plate) ?? null
+      : (matchingResidents.length === 1 ? matchingResidents[0] : null));
+
+  if (!resident) {
+    return null;
+  }
+
+  const allocation = await fetchResidentAllocationSummary(resident.uid);
+  return {
+    resident,
+    transactions: allocation.transactions,
+    usedLiters: allocation.usedLiters,
+    remainingLiters: allocation.remainingLiters,
+  };
+}
+
+export async function saveStationFuelSettings(
+  uid: string,
+  input: SaveStationFuelSettingsInput,
+): Promise<StationAccount | null> {
+  const currentUser = auth.currentUser;
+  if (!currentUser || currentUser.uid !== uid) {
+    throw new Error("You must be signed in as this station user to update fuel settings.");
+  }
+
+  await updateDoc(doc(db, "accounts", uid), {
+    availableFuels: Object.keys(input.fuelInventory),
+    fuelInventory: input.fuelInventory,
+    fuelCapacities: input.fuelCapacities,
+    fuelPrices: input.fuelPrices,
+    updatedAt: serverTimestamp(),
+  });
+
+  return fetchStationAccount(uid);
+}
+
+export async function recordDispenseTransaction(
+  input: RecordDispenseTransactionInput,
+): Promise<RecordDispenseTransactionResult> {
+  const currentUser = auth.currentUser;
+  if (!currentUser || currentUser.uid !== input.stationUid) {
+    throw new Error("You must be signed in as this station user to record a dispense transaction.");
+  }
+
+  const liters = Math.round(Number(input.liters) * 100) / 100;
+  if (!Number.isFinite(liters) || liters <= 0) {
+    throw new Error("Liters must be greater than zero.");
+  }
+
+  const [station, resident] = await Promise.all([
+    fetchStationAccount(input.stationUid),
+    fetchResidentAccount(input.residentUid),
+  ]);
+
+  if (!station) {
+    throw new Error("Station account was not found.");
+  }
+
+  if (!resident) {
+    throw new Error("Resident account was not found.");
+  }
+
+  const selectedFuel = input.fuelType.trim();
+  const pricePerLiter = station.fuelPrices?.[selectedFuel];
+  if (!Number.isFinite(pricePerLiter)) {
+    throw new Error("Selected fuel is not configured for this station.");
+  }
+
+  const availableInventory = Number(station.fuelInventory?.[selectedFuel] ?? 0);
+  if (availableInventory < liters) {
+    throw new Error("Not enough station inventory for this dispense.");
+  }
+
+  const createdAt = new Date();
+  const currentWeekKey = getWeekKey(createdAt);
+  const fuelAllocation = getResidentFuelAllocation(resident);
+  const usedLitersBefore = getResidentFuelUsed(resident, currentWeekKey);
+  const remainingBefore = Math.max(fuelAllocation - usedLitersBefore, 0);
+  if (liters > remainingBefore) {
+    throw new Error("This fuel request exceeds the resident's weekly allocation.");
+  }
+
+  const amount = Math.round(liters * pricePerLiter * 100) / 100;
+  const nextFuelInventory = {
+    ...(station.fuelInventory ?? {}),
+    [selectedFuel]: Math.round((availableInventory - liters) * 100) / 100,
+  };
+  const nextFuelUsed = Math.round((usedLitersBefore + liters) * 100) / 100;
+
+  const transactionRef = doc(collection(db, "transactions"));
+  const stationRef = doc(db, "accounts", station.uid);
+  const residentRef = doc(db, "accounts", resident.uid);
+  const batch = writeBatch(db);
+
+  batch.set(transactionRef, {
+    residentUid: resident.uid,
+    stationUid: station.uid,
+    stationId: station.stationDirectoryId ?? station.uid,
+    residentName: getAccountDisplayName(resident),
+    stationName: station.stationName ?? getAccountDisplayName(station),
+    stationBrand: station.brand ?? "",
+    residentBarangay: resident.barangay ?? "",
+    stationBarangay: station.barangay ?? "",
+    plate: resident.plate ?? "",
+    vehicleType: resident.vehicleType ?? "",
+    liters,
+    fuelType: selectedFuel,
+    pricePerLiter,
+    amount,
+    totalPaid: amount,
+    occurredAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+    weekKey: currentWeekKey,
+    status: "dispensed",
+  });
+
+  batch.update(stationRef, {
+    fuelInventory: nextFuelInventory,
+    updatedAt: serverTimestamp(),
+  });
+
+  batch.update(residentRef, {
+    fuelUsed: nextFuelUsed,
+    fuelWeekKey: currentWeekKey,
+    updatedAt: serverTimestamp(),
+  });
+
+  await batch.commit();
+
+  return {
+    transaction: {
+      id: transactionRef.id,
+      residentUid: resident.uid,
+      stationUid: station.uid,
+      stationId: station.stationDirectoryId ?? station.uid,
+      residentName: getAccountDisplayName(resident),
+      stationName: station.stationName ?? getAccountDisplayName(station),
+      stationBrand: station.brand ?? "",
+      residentBarangay: resident.barangay ?? "",
+      stationBarangay: station.barangay ?? "",
+      plate: resident.plate ?? "",
+      vehicleType: resident.vehicleType ?? "",
+      liters,
+      fuelType: selectedFuel,
+      pricePerLiter,
+      amount,
+      totalPaid: amount,
+      occurredAt: createdAt,
+      createdAt,
+      weekKey: currentWeekKey,
+      status: "dispensed",
+    },
+    resident: {
+      ...resident,
+      fuelAllocation,
+      fuelUsed: nextFuelUsed,
+      fuelWeekKey: currentWeekKey,
+      updatedAt: createdAt.toISOString(),
+    },
+    station: {
+      ...station,
+      fuelInventory: nextFuelInventory,
+      updatedAt: createdAt.toISOString(),
+    },
+    usedLiters: nextFuelUsed,
+    remainingLiters: Math.max(Math.round((fuelAllocation - nextFuelUsed) * 100) / 100, 0),
+  };
 }
 
 export async function assignStationUser(

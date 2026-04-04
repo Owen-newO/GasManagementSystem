@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import BottomNav from "@/shared/components/navigation/BottomNav";
-import { fetchStationDirectory, type StationDirectoryRecord } from "@/lib/data/agas";
+import { fetchStationDirectory } from "@/lib/data/agas";
 
 mapboxgl.accessToken = "pk.eyJ1IjoibWF0YWRldnMiLCJhIjoiY21mNmdhc3YyMGcxdzJrb21xZm80c3NpbCJ9.R0nU8Ip_9RCo-Q2aWxAbXA";
 
@@ -292,23 +292,18 @@ export default function NearbyStations({ activeTab, onTabChange }) {
 
       try {
         const directoryStations = await fetchStationDirectory();
-        const sourceStations = directoryStations.length > 0
-          ? directoryStations.map((station) => mapDirectoryStation(station))
-          : STATIC_STATIONS;
 
         if (cancelled) return;
 
-        const withDistance = sourceStations
+        const withDistance = directoryStations
+          .map((station) => mapDirectoryStation(station))
           .map((st) => ({ ...st, distance: getDistance(lat, lon, st.lat, st.lon) }))
           .sort((a, b) => a.distance - b.distance);
         setStations(withDistance);
       } catch {
         if (cancelled) return;
 
-        const withDistance = STATIC_STATIONS
-          .map((st) => ({ ...st, distance: getDistance(lat, lon, st.lat, st.lon) }))
-          .sort((a, b) => a.distance - b.distance);
-        setStations(withDistance);
+        setStations([]);
       } finally {
         if (!cancelled) {
           setLoadingStations(false);
