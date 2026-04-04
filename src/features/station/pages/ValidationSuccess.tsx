@@ -1,6 +1,7 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { formatDecodedDate } from "@/lib/qr/qrCodec";
 import BottomNav from "@/shared/components/navigation/BottomNav";
+import StationDesktopSidebar from "@/shared/components/navigation/StationDesktopSidebar";
 
 type OfficerFuel = {
   officerFirstName?: string;
@@ -50,6 +51,7 @@ type ValidationSuccessProps = {
     serial?: string;
   } | null;
   onBack: () => void;
+  onLogout: () => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
 };
@@ -58,6 +60,7 @@ export default function ValidationSuccess({
   officer,
   scannedResident,
   onBack,
+  onLogout,
   activeTab,
   onTabChange,
 }: ValidationSuccessProps) {
@@ -289,7 +292,288 @@ export default function ValidationSuccess({
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-surface relative">
+    <div className="flex min-h-dvh bg-[#eef2f7]">
+      <StationDesktopSidebar activeTab={activeTab} onTabChange={onTabChange} onLogout={onLogout} />
+
+      {/* ── Desktop Layout ─────────────────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-col flex-1 overflow-hidden bg-[#f1f5f9]">
+        {/* Top Header */}
+        <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shrink-0">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={onBack}
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors">
+              <span className="material-symbols-outlined text-slate-600" style={{ fontSize: "20px" }}>arrow_back</span>
+            </button>
+            <div>
+              <h1 className="font-headline font-black text-[#003366] text-xl leading-none">Validation Result</h1>
+              <p className="text-xs text-slate-400 mt-1">{firstName} {lastName} · {plateNumber}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5">
+            <div className="w-5 h-5 bg-[#2e7d32] rounded-full flex items-center justify-center">
+              <span className="material-symbols-outlined text-white" style={{ fontSize: "14px", fontVariationSettings: "'FILL' 1" }}>check</span>
+            </div>
+            <span className="text-sm font-black text-[#166534] uppercase tracking-wide">Validated · Transaction Authorized</span>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-8">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* Left column: Resident Info + Allocation */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100">
+                  <p className="text-outline text-xs font-bold tracking-widest uppercase">Verified Resident</p>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+                      <p className="text-outline text-[10px] font-bold uppercase tracking-wider">First Name</p>
+                      <p className="font-headline font-black text-2xl text-[#003366] tracking-widest mt-0.5">{firstName}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+                      <p className="text-outline text-[10px] font-bold uppercase tracking-wider">Last Name</p>
+                      <p className="font-headline font-black text-2xl text-[#003366] tracking-widest mt-0.5">{lastName}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 text-center">
+                    <p className="text-outline text-[10px] font-bold uppercase tracking-wider">Plate Number</p>
+                    <p className="font-headline font-black text-5xl text-[#003366] tracking-widest leading-tight mt-1">{plateNumber}</p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <p className="text-outline text-xs font-bold uppercase tracking-wider">Vehicle Type:</p>
+                      <p className="font-headline font-bold text-lg text-on-surface">{vehicleType}</p>
+                    </div>
+                  </div>
+
+                  {displayFuelType && (
+                    <div
+                      className="rounded-full border px-5 py-3 flex items-center justify-center gap-2 shadow-sm"
+                      style={{
+                        backgroundImage: `linear-gradient(to right, ${fuelTypeTheme.bgFrom}, ${fuelTypeTheme.bgTo})`,
+                        borderColor: fuelTypeTheme.border,
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ color: fuelTypeTheme.text, fontSize: "20px", fontVariationSettings: "'FILL' 1" }}>local_gas_station</span>
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wider leading-none" style={{ color: fuelTypeTheme.text }}>Fuel Type</p>
+                        <p className="text-xl font-black leading-tight" style={{ color: fuelTypeTheme.text }}>{displayFuelType}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {registeredAt && (
+                    <p className="text-outline text-xs text-center">Registered: {registeredAt}</p>
+                  )}
+
+                  {/* Fuel Allocation */}
+                  <div className="rounded-2xl p-4 border overflow-hidden" style={{ background: allocationBg, borderColor: allocationBorder }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: textMutedColor }}>Fuel Allocation</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="material-symbols-outlined text-lg" style={{ color: textColor, fontVariationSettings: "'FILL' 1" }}>local_gas_station</span>
+                          <p className="text-5xl font-black font-headline leading-none" style={{ color: textColor }}>{previewRemaining.toFixed(1)}</p>
+                          <span className="text-2xl" style={{ color: textColor }}>Liters</span>
+                        </div>
+                        <p className="text-2xl font-bold mt-1" style={{ color: textColor }}>Remaining</p>
+                      </div>
+                      {(() => {
+                        const pct = Math.round((previewRemaining / fuelLimit) * 100);
+                        const r = 22;
+                        const circ = 2 * Math.PI * r;
+                        const dash = (pct / 100) * circ;
+                        return (
+                          <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+                            <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90 absolute inset-0">
+                              <circle cx="32" cy="32" r={r} fill="none" stroke={allocationBorder} strokeWidth="5" />
+                              <circle cx="32" cy="32" r={r} fill="none" stroke={circleColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} />
+                            </svg>
+                            <div className="relative flex flex-col items-center leading-none">
+                              <span className="text-sm font-black" style={{ color: circleColor }}>{pct}%</span>
+                              <span className="text-[8px] font-bold uppercase" style={{ color: circleColor }}>Left</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div className="mt-3 h-4 w-full rounded-full bg-white/70 overflow-hidden">
+                      <div className="h-full rounded-full flex items-center justify-end pr-2"
+                        style={{ backgroundColor: barColor, width: `${Math.min((fuelConsumed / fuelLimit) * 100, 100)}%` }}>
+                        <span className="text-[9px] font-black text-white whitespace-nowrap">{fuelConsumed}L used</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-end text-2xl font-bold" style={{ color: textColor }}>
+                      <span>Total: {fuelLimit} L / week</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right column: Dispense */}
+              <div className="flex flex-col gap-4">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <p className="text-outline text-xs font-bold tracking-widest uppercase">Dispense</p>
+                    <div className="relative flex w-[220px] gap-1 rounded-xl bg-slate-200/70 p-1 shrink-0">
+                      <div className={`absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-lg bg-[#003366] shadow-sm transition-transform duration-300 ease-out ${inputMode === "cash" ? "translate-x-0" : "translate-x-[calc(100%+0.25rem)]"}`} />
+                      <button type="button" onClick={() => switchInputMode("cash")}
+                        className={`relative z-10 flex-1 rounded-lg py-2 text-[11px] font-black uppercase tracking-wide transition-colors duration-300 ${inputMode === "cash" ? "text-white" : "text-slate-600"}`}>
+                        Cash (₱)
+                      </button>
+                      <button type="button" onClick={() => switchInputMode("liters")}
+                        className={`relative z-10 flex-1 rounded-lg py-2 text-[11px] font-black uppercase tracking-wide transition-colors duration-300 ${inputMode === "liters" ? "text-white" : "text-slate-600"}`}>
+                        Liters
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    <div className={`grid gap-2 ${isDieselType ? "grid-cols-2" : "grid-cols-3"}`}>
+                      {fuelOptionButtons.map((option) => {
+                        const active = selectedFuelOption === option;
+                        return (
+                          <button key={option} type="button"
+                            onClick={() => { setSelectedFuelOption(option); setActionError(""); }}
+                            className={`rounded-lg border py-2.5 px-2 text-sm font-bold active:scale-95 transition-all ${active ? "bg-[#003366] text-white border-[#003366]" : "bg-white text-[#003366] border-outline-variant/40 hover:bg-slate-50"}`}>
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      <span className="font-bold text-[#003366]">₱{formatPeso(pricePerLiter)}</span>
+                      <span className="text-outline"> / L</span>
+                      {officer?.fuelPrices?.[selectedFuelOption] != null
+                        ? <span className="text-outline"> · station price</span>
+                        : <span className="text-outline"> · default until set in Fuel &amp; pricing</span>}
+                    </p>
+
+                    {remainingLiters <= 0 ? (
+                      <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold px-4 py-3 text-center">
+                        No allocation remaining — this resident has used their full weekly limit.
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-outline">Conversion</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className={`relative min-w-0 ${inputMode === "cash" ? "order-1" : "order-2"}`}>
+                            <span className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg font-black ${inputMode === "liters" ? "text-slate-400" : "text-[#003366]"}`}>₱</span>
+                            <input type="number" min="0" max={maxCashForAllocation} step="0.01"
+                              value={cashInput} onChange={onConversionPesoChange}
+                              placeholder={formatPeso(0)} disabled={inputMode === "liters"}
+                              className={`w-full rounded-lg border py-3 pl-9 pr-3 outline-none disabled:opacity-100 ${inputMode === "liters" ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-800" : "border-outline-variant/30 bg-white text-on-surface focus:border-[#003366]"}`} />
+                          </div>
+                          <div className={`relative min-w-0 ${inputMode === "cash" ? "order-2" : "order-1"}`}>
+                            <input type="number" min="0" max={remainingLiters}
+                              step={inputMode === "liters" ? "0.1" : "any"}
+                              value={literInput} onChange={onConversionLiterChange}
+                              placeholder="0" disabled={inputMode === "cash"}
+                              className={`w-full rounded-lg border py-3 pl-3 pr-10 outline-none disabled:opacity-100 ${inputMode === "cash" ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-800" : "border-outline-variant/30 bg-white text-on-surface focus:border-[#003366]"}`} />
+                            <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-lg font-black ${inputMode === "cash" ? "text-slate-400" : "text-[#003366]"}`}>L</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-slate-500">Max ₱{formatPeso(maxCashForAllocation)} · {remainingLiters.toFixed(1)} L allocation</p>
+
+                        {inputMode === "liters" ? (
+                          <div className="grid grid-cols-5 gap-2">
+                            {[2, 5, 10, 15, 20].map((amount) => {
+                              const exceeds = amount > remainingLiters;
+                              return (
+                                <button key={amount} type="button" disabled={exceeds}
+                                  onClick={() => {
+                                    if (exceeds) return;
+                                    const Lc = Math.min(amount, remainingLiters);
+                                    let cash = Math.round(Lc * pricePerLiter * 100) / 100;
+                                    if (cash > maxCashForAllocation) {
+                                      cash = maxCashForAllocation;
+                                      setCashInput(pesoInputString(cash));
+                                      const L2 = Math.min(remainingLiters, cash / pricePerLiter);
+                                      setLiterInput(L2 > 0 ? formatLitersFromExactCash(L2) : "");
+                                    } else {
+                                      setLiterInput(String(Lc));
+                                      setCashInput(pesoInputString(cash));
+                                    }
+                                    setActionError("");
+                                  }}
+                                  className={`rounded-lg border py-2.5 text-sm font-bold transition-all ${exceeds ? "border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed" : "border-outline-variant/40 bg-white text-[#003366] active:scale-95 hover:bg-slate-50"}`}>
+                                  {amount} L
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-4 gap-2">
+                            {[50, 100, 500, 1000].map((peso) => {
+                              const exceeds = peso > maxCashForAllocation;
+                              const approxL = pricePerLiter > 0 ? peso / pricePerLiter : 0;
+                              return (
+                                <button key={peso} type="button" disabled={exceeds}
+                                  onClick={() => {
+                                    if (exceeds) return;
+                                    setCashInput(pesoInputString(peso));
+                                    const L = pricePerLiter > 0 ? Math.min(remainingLiters, peso / pricePerLiter) : 0;
+                                    setLiterInput(L > 0 ? formatLitersFromExactCash(L) : "");
+                                    setActionError("");
+                                  }}
+                                  className={`rounded-lg border py-2.5 px-1 text-xs font-bold transition-all leading-tight ${exceeds ? "border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed" : "border-outline-variant/40 bg-white text-[#003366] active:scale-95 hover:bg-slate-50"}`}>
+                                  <span className="block">₱{formatPeso(peso)}</span>
+                                  {!exceeds && approxL > 0 && (
+                                    <span className="block font-medium text-[9px] text-slate-500 mt-0.5">≈ {formatLitersFromExactCash(approxL)} L</span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {actionError && (
+                      <div className="bg-red-50 border border-red-200 text-red-800 text-sm font-medium px-4 py-3 rounded-xl">{actionError}</div>
+                    )}
+
+                    <div className="bg-tertiary-fixed/30 border-l-4 border-tertiary p-4 rounded-r-lg flex gap-3">
+                      <span className="material-symbols-outlined text-tertiary shrink-0">info</span>
+                      <p className="text-sm text-on-tertiary-fixed-variant leading-tight">
+                        Allocation is valid for immediate dispensing at the designated pump station. Please ensure fuel nozzle is securely attached.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 pt-2">
+                      <button onClick={handleConfirmDispense}
+                        disabled={remainingLiters <= 0 || litersToDispense <= 0}
+                        className={`w-full font-headline font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${remainingLiters > 0 && litersToDispense > 0 ? "bg-[#2e7d32] text-white active:scale-95 hover:bg-[#1b5e20]" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
+                        <span className="material-symbols-outlined">gas_meter</span>
+                        <span className="flex flex-col items-center leading-tight">
+                          <span>Confirm Dispense</span>
+                          {litersToDispense > 0 && (
+                            <span className="text-[11px] font-bold opacity-90 mt-0.5">{litersLabelForUi} L · ₱{formatPeso(cashTotalForDispense)}</span>
+                          )}
+                        </span>
+                      </button>
+                      <button onClick={onBack}
+                        className="w-full bg-slate-100 text-slate-700 font-headline font-bold py-4 rounded-xl active:scale-95 hover:bg-slate-200 transition-all">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center text-outline text-xs space-y-1 pb-4">
+                  <p>© 2026 Mata Technologies Inc.</p>
+                  <p>Ref ID: VAL-9823-CEB-2024</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* ── Mobile Layout ───────────────────────────────────────────────────────── */}
+      <div className="flex md:hidden flex-col flex-1 bg-surface relative">
       <main
         className="flex-1 pt-2 pb-36 px-4 max-w-md mx-auto w-full"
         style={{
@@ -685,8 +969,8 @@ export default function ValidationSuccess({
       </main>
 
       <BottomNav active={activeTab} onChange={onTabChange} />
-
-      {/* Fuel Limit Modal */}
+      </div>
+      {/* ── Fuel Limit Modal (shared) ─────────────────────────────────────────── */}
       {showLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">

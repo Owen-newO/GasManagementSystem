@@ -299,6 +299,7 @@ export default function App() {
           officer={officer}
           scannedResident={scannedResident}
           onBack={handleValidationBack}
+          onLogout={handleLogout}
           activeTab={activeTab}
           onTabChange={handleOfficerTabChange}
         />
