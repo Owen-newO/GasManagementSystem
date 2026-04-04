@@ -5,7 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import html2canvas from "html2canvas";
 import { subscribeResidentAllocationSummary, WEEKLY_FUEL_LIMIT } from "@/lib/data/agas";
 import { encodeQR } from "@/lib/qr/qrCodec";
-
+import mapboxgl from "mapbox-gl";
 function formatTimestamp(iso: string) {
   return new Date(iso).toLocaleString("en-PH", {
     month: "short", day: "numeric", year: "numeric",
